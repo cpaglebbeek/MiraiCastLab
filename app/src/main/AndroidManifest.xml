@@ -13,7 +13,12 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <!-- Wi-Fi P2P peer discovery needs location up to API 32, NEARBY_WIFI_DEVICES from API 33. -->
+    <!-- Android 12 requires FINE and COARSE to be declared and requested together. Both are capped
+         at API 32 because from API 33 NEARBY_WIFI_DEVICES replaces them for peer discovery, and this
+         app has no other reason to hold a location permission. It never reads your location. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"
@@ -36,6 +41,59 @@
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.midi" android:required="false" />
+
+    <!--
+      Package-visibility (Android 11+) filtering makes getPackageInfo() and queryIntentActivities()
+      fail identically whether or not a package exists. Without this element the Smart View, DeX,
+      Android Auto and root-manager checks can only report NOT_TESTED - they cannot tell "absent"
+      from "invisible to us". Naming the packages we look up lifts that filter for those names only.
+
+      This grants NO permission and NO data access. QUERY_ALL_PACKAGES is deliberately NOT used:
+      it is policy-sensitive and this app does not need it.
+    -->
+    <queries>
+        <!-- Samsung casting / desktop surfaces (spec 2.2, 2.3) -->
+        <package android:name="com.samsung.android.smartmirroring" />
+        <package android:name="com.samsung.android.app.mirrorlink" />
+        <package android:name="com.samsung.android.mdx" />
+        <package android:name="com.samsung.android.dressroom" />
+        <package android:name="com.sec.android.app.desktoplauncher" />
+        <package android:name="com.samsung.desktopsystemui" />
+
+        <!-- Android Auto / projection hosts (spec 3) -->
+        <package android:name="com.google.android.projection.gearhead" />
+        <package android:name="com.google.android.apps.automotive.templates.host" />
+        <package android:name="com.google.android.gms" />
+
+        <!-- Settings, so the wizard can tell "this panel does not exist here" from "we cannot look" -->
+        <package android:name="com.android.settings" />
+
+        <!-- Known root managers. Presence is evidence for the root verdict; absence, with this
+             element in place, is a real negative rather than an invisible one. -->
+        <package android:name="com.topjohnwu.magisk" />
+        <package android:name="io.github.huskydg.magisk" />
+        <package android:name="me.weishu.kernelsu" />
+        <package android:name="eu.chainfire.supersu" />
+        <package android:name="com.noshufou.android.su" />
+        <package android:name="com.koushikdutta.superuser" />
+        <package android:name="com.thirdparty.superuser" />
+        <package android:name="com.yellowes.su" />
+        <package android:name="com.kingroot.kinguser" />
+        <package android:name="com.kingo.root" />
+        <package android:name="com.zhiqupk.root.global" />
+        <package android:name="com.alephzain.framaroot" />
+
+        <!-- Settings panels the Miracast wizard offers to open. A resolvable intent is CONFIRMED;
+             an unresolvable one is UNSUPPORTED for this device - both are real answers. -->
+        <intent><action android:name="android.settings.CAST_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.WIFI_DISPLAY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
+        <intent><action android:name="com.samsung.wfd.LAUNCH_WFD_PICKER" /></intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="false"

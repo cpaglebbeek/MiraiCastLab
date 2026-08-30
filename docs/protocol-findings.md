@@ -67,6 +67,28 @@ No app can read that advertisement. The project therefore answers a different, a
 | 2.7 | Smart View packages present and settings intents resolvable | NOT TESTED | `SmartViewProbe` |
 | 2.8 | DeX reflection resolves | NOT TESTED | `DexProbe` |
 
+### 2.9 Emulator baseline — **run 2026-08-30**, `b6d559c0`
+
+Not a Z Fold, and it proves nothing about Samsung or the Mirai. It does prove the **instrument
+works**: all twelve probes ran on a real Android runtime and produced 715 graded observations
+(608 confirmed/observed, 21 inferred, 28 unsupported, 59 not-tested, 3 probe errors) into a 246 KB
+JSONL evidence file, which rendered into the full 20-section report with grading intact.
+
+Two results are worth keeping because they show the discipline holding under real data:
+
+| Observation | Status | Why that status is the right one |
+|---|---|---|
+| `device.one_ui_version` | UNSUPPORTED | Every route was tried and named in the note; the device is not a Samsung, so absence is the *expected platform answer*. |
+| `device.root_detected` = NO | INFERRED | Note: *"Absence of evidence is not evidence of absence: an unprivileged app cannot see most of the filesystem, and modern root solutions hide themselves from exactly these checks."* |
+| `smartview.session_active` | INFERRED (0/3 signals) | Never CONFIRMED. An app cannot prove the transport is Miracast. |
+| `codec.h264_max_size` = 2048x1024 | CONFIRMED, with a note | *"This is a phone-side encoder limit only; the resolution a Miracast sink negotiates is NOT_TESTED."* |
+
+Verified on the rendered report: **no `NOT_TESTED` observation appears in section 17 (Unsupported),
+and no `UNSUPPORTED` observation appears in section 18 (still requires hardware).**
+
+The run also found a real defect (MC-003): the Samsung module's p2p-interface check assumed
+`NetworkInterface.getNetworkInterfaces()` never returns null. Fixed.
+
 ---
 
 ## 3. Toyota Mirai 2025 — vehicle-side

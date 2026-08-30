@@ -1,5 +1,6 @@
 package nl.icthorse.miraicastlab.scene
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,7 +25,7 @@ class PresentationHostActivity : ComponentActivity() {
             LabCategory.DISPLAY,
             "presentation_host_created",
             LabStatus.OBSERVED,
-            mapOf("displayId" to display?.displayId.toString()),
+            mapOf("displayId" to currentDisplayId()),
         )
         setContent {
             LabTheme { TestPatternScreen(onBack = { finish() }) }
@@ -38,5 +39,24 @@ class PresentationHostActivity : ComponentActivity() {
             LabStatus.OBSERVED,
         )
         super.onDestroy()
+    }
+
+    /**
+     * The id of the display this activity actually landed on.
+     *
+     * Activity.getDisplay() only exists from API 30; on API 29 the deprecated
+     * WindowManager.getDefaultDisplay() is the supported route. Which display we ended up on is one
+     * of the findings this project cares about, so it must be readable on every supported version
+     * rather than silently absent on the oldest one.
+     */
+    private fun currentDisplayId(): String = try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.displayId?.toString() ?: "unknown"
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay?.displayId?.toString() ?: "unknown"
+        }
+    } catch (t: Throwable) {
+        t::class.java.simpleName
     }
 }

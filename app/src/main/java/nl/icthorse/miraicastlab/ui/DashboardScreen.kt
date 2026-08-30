@@ -31,6 +31,7 @@ import nl.icthorse.miraicastlab.core.LabStatus
 import nl.icthorse.miraicastlab.core.Observation
 import nl.icthorse.miraicastlab.core.ProbeRegistry
 import nl.icthorse.miraicastlab.core.SessionLogger
+import nl.icthorse.miraicastlab.scan.ScanState
 
 /**
  * The lab's home screen (spec section 5.1).
@@ -47,19 +48,16 @@ fun DashboardScreen(onNavigate: (String) -> Unit) {
 
     var scanning by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf("") }
-    var observations by remember { mutableStateOf<List<Observation>>(emptyList()) }
 
-    // A quick scan on first open, so the dashboard is never empty when the tester opens the app
-    // in the car. The full scan is still an explicit button.
+    // The dashboard and the device-scan screen read the SAME process-wide scan result. Keeping two
+    // copies would let them disagree about the device in front of the tester, which is exactly the
+    // kind of quiet inconsistency this app exists to avoid.
+    val observations: List<Observation> by ScanState.last.collectAsState()
+
+    // Scan on first open, so the dashboard is never empty when the tester opens the app in the car.
+    // If a scan already ran on another screen, reuse it rather than repeating seconds of work.
     LaunchedEffect(Unit) {
-        if (observations.isEmpty()) {
-            scanning = true
-            observations = ProbeRegistry.runAll(context) { p, i, n ->
-                progress = "${i + 1}/$n  ${p.title}"
-            }
-            scanning = false
-            progress = ""
-        }
+        if (observations.isEmpty()) runScan(context, { scanning = it }, { progress = it })
     }
 
     fun value(key: String): String =
@@ -164,15 +162,7 @@ fun DashboardScreen(onNavigate: (String) -> Unit) {
             item {
                 Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     BigActionButton("RUN DEVICE SCAN", {
-                        scope.launch {
-                            scanning = true
-                            SessionLogger.log(LabCategory.DEVICE, "device_scan_requested", LabStatus.CONFIRMED)
-                            observations = ProbeRegistry.runAll(context) { p, i, n ->
-                                progress = "${i + 1}/$n  ${p.title}"
-                            }
-                            scanning = false
-                            progress = ""
-                        }
+                        scope.launch { runScan(context, { scanning = it }, { progress = it }) }
                     }, enabled = !scanning, subtitle = "inventory every capability")
                     BigActionButton("MIRACAST TEST", { onNavigate("miracast") }, subtitle = "guided Smart View wizard")
                     BigActionButton("DISPLAY TEST", { onNavigate("display") }, subtitle = "topology, metrics, secondary display")
@@ -209,5 +199,30 @@ private fun Fact(label: String, value: String, status: LabStatus) {
             Text(value, style = MaterialTheme.typography.bodyLarge)
         }
         StatusChip(status)
+    }
+}
+
+/**
+ * Runs every probe and publishes the result to [ScanState] so the whole app sees one scan.
+ *
+ * The duration is measured and logged: a scan that suddenly takes twice as long is usually a probe
+ * that started timing out, and that is worth seeing before it is mistaken for a device change.
+ */
+private suspend fun runScan(
+    context: android.content.Context,
+    setScanning: (Boolean) -> Unit,
+    setProgress: (String) -> Unit,
+) {
+    setScanning(true)
+    SessionLogger.log(LabCategory.DEVICE, "device_scan_requested", LabStatus.CONFIRMED)
+    val startedAt = android.os.SystemClock.elapsedRealtime()
+    try {
+        val found = ProbeRegistry.runAll(context) { probe, index, total ->
+            setProgress("" + (index + 1) + "/" + total + "  " + probe.title)
+        }
+        ScanState.publish(found, android.os.SystemClock.elapsedRealtime() - startedAt)
+    } finally {
+        setScanning(false)
+        setProgress("")
     }
 }

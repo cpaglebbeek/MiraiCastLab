@@ -1,5 +1,6 @@
 package nl.icthorse.miraicastlab.net
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pDeviceList
@@ -240,6 +241,9 @@ object WifiP2pFacts {
     }
 
     /** Peer list. Caller must have verified the NEARBY permission first. */
+    // Lint cannot see the guard: WifiP2pProbe checks LabPermissions.NEARBY and returns
+    // NOT_TESTED before it ever reaches here. The KDoc above states that contract.
+    @SuppressLint("MissingPermission")
     suspend fun awaitPeers(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel,
@@ -249,6 +253,9 @@ object WifiP2pFacts {
     }
 
     /** Connection info. Caller must have verified the NEARBY permission first. */
+    // Lint cannot see the guard: WifiP2pProbe checks LabPermissions.NEARBY and returns
+    // NOT_TESTED before it ever reaches here. The KDoc above states that contract.
+    @SuppressLint("MissingPermission")
     suspend fun awaitConnectionInfo(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel,
@@ -258,6 +265,9 @@ object WifiP2pFacts {
     }
 
     /** Group info; the callback legitimately delivers null when no group is formed, hence [Held]. */
+    // Lint cannot see the guard: WifiP2pProbe checks LabPermissions.NEARBY and returns
+    // NOT_TESTED before it ever reaches here. The KDoc above states that contract.
+    @SuppressLint("MissingPermission")
     suspend fun awaitGroupInfo(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel,
@@ -267,6 +277,9 @@ object WifiP2pFacts {
     }
 
     /** Local device info; API 29+. Null-delivering callback, hence [Held]. */
+    // Lint cannot see the guard: WifiP2pProbe checks LabPermissions.NEARBY and returns
+    // NOT_TESTED before it ever reaches here.
+    @SuppressLint("MissingPermission")
     suspend fun awaitDeviceInfo(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel,
