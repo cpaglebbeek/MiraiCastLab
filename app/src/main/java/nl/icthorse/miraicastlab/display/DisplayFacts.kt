@@ -87,7 +87,7 @@ data class DisplayFact(
         add("flags" to (flagNames.joinToString(", ").ifEmpty { "none set (0x" + Integer.toHexString(flags) + ")" }))
         add("real size" to resolution)
         add("density" to (densityDpi.toString() + " dpi  (x=" + fmt(xdpi) + ", y=" + fmt(ydpi) + ")"))
-        add("rotation" to (rotationDegrees.toString() + " deg (Surface.ROTATION_" + rotationDegrees + ")"))
+        add("rotation" to (rotationDegrees.toString() + " deg (Surface rotation index " + rotation + ")"))
         add("refreshRate" to (fmt(refreshRate) + " Hz"))
         add("current mode" to ("#" + currentModeId))
         add("supported modes" to (if (modes.isEmpty()) "unreported" else modes.joinToString("  ")))

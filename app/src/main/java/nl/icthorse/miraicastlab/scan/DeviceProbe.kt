@@ -2,6 +2,7 @@ package nl.icthorse.miraicastlab.scan
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.FeatureInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import nl.icthorse.miraicastlab.core.DashboardKeys
@@ -195,18 +196,31 @@ object DeviceProbe : Probe {
     }
 
     /**
-     * Renders Samsung's packed One UI integer. ro.build.version.oneui carries e.g. 60101 for
-     * One UI 6.1.1; SEM_PLATFORM_INT carries 90000 + oneUi*10000, e.g. 170000 for One UI 8.
+     * Renders Samsung's packed One UI integer: major*10000 + minor*100 + patch, so 60101 is 6.1.1.
+     * The two sources use different bases, hence [SEM_BASE] rather than one guessing function -
+     * a One UI 9 property (90000) and a SEM value for One UI 0 would otherwise be indistinguishable.
      */
-    private fun formatOneUi(raw: Int): String? {
-        val packed = if (raw >= 90000) raw - 90000 else raw
+    private fun formatPackedOneUi(packed: Int): String? {
         if (packed <= 0) return null
         val major = packed / 10000
+        if (major <= 0) return null
         val minor = (packed % 10000) / 100
         val patch = packed % 100
-        if (major <= 0) return null
         return if (patch == 0) major.toString() + "." + minor
         else major.toString() + "." + minor + "." + patch
+    }
+
+    /** SEM_PLATFORM_INT is the packed One UI number offset by this constant. */
+    private const val SEM_BASE = 90000
+
+    /** Accepts both the packed integer form and the rare dotted-string form of the property. */
+    private fun decodeOneUiProperty(raw: String): String? {
+        val t = raw.trim()
+        if (t.contains('.')) {
+            return if (t.matches(Regex("\\d+(\\.\\d+)+"))) t else null
+        }
+        val n = t.toIntOrNull() ?: return null
+        return formatPackedOneUi(n)
     }
 
     private fun oneUiVersion(): List<Observation> {
@@ -219,7 +233,7 @@ object DeviceProbe : Probe {
             is Lookup.Value -> {
                 out += Observation.confirmed("device.one_ui_raw_property", prop.v, c,
                     "ro.build.version.oneui, read via android.os.SystemProperties.")
-                val pretty = prop.v.trim().toIntOrNull()?.let { formatOneUi(it) }
+                val pretty = decodeOneUiProperty(prop.v)
                 if (pretty != null) {
                     return out + Observation.confirmed(
                         DashboardKeys.ONE_UI, pretty, c,
@@ -238,14 +252,15 @@ object DeviceProbe : Probe {
             is Lookup.Value -> {
                 out += Observation.confirmed("device.sem_platform_int", sem.v, c,
                     "Samsung-only field android.os.Build.VERSION.SEM_PLATFORM_INT.")
-                val pretty = sem.v.toIntOrNull()?.let { formatOneUi(it) }
+                val pretty = sem.v.toIntOrNull()
+                    ?.let { if (it > SEM_BASE) formatPackedOneUi(it - SEM_BASE) else null }
                 if (pretty != null) {
                     return out + Observation(
                         DashboardKeys.ONE_UI,
                         pretty,
                         LabStatus.INFERRED,
                         "Derived from SEM_PLATFORM_INT=" + sem.v +
-                            " using the documented 90000 + version*10000 packing; Samsung publishes " +
+                            " using the observed 90000 + version*10000 packing; Samsung publishes " +
                             "no contract for this field, so the decode is inferred, not confirmed.",
                         c,
                     )
@@ -279,12 +294,15 @@ object DeviceProbe : Probe {
             "absent",
             LabStatus.UNSUPPORTED,
             "No One UI version could be resolved. Tried: " + tried.joinToString("; ") + ". " +
-                if (samsung) {
-                    "This is a Samsung device, so an absent value more likely means the reflective " +
-                        "route is blocked than that One UI is missing."
-                } else {
-                    "This is not a Samsung device, so an absent One UI version is the expected result."
-                },
+                (
+                    if (samsung) {
+                        "This is a Samsung device, so an absent value more likely means the " +
+                            "reflective route is blocked than that One UI is missing."
+                    } else {
+                        "This is not a Samsung device, so an absent One UI version is the " +
+                            "expected result."
+                    }
+                    ),
             c,
         )
         return out
@@ -300,15 +318,15 @@ object DeviceProbe : Probe {
 
         // 1. su binaries.
         val found = mutableListOf<String>()
-        var pathCheckFailed: Throwable? = null
-        try {
+        val pathFailure: Throwable? = try {
             SU_PATHS.forEach { p -> if (File(p).exists()) found += p }
+            null
         } catch (t: Throwable) {
-            pathCheckFailed = t
+            t
         }
         when {
-            pathCheckFailed != null ->
-                out += Observation.error("device.root.su_paths", pathCheckFailed, c)
+            pathFailure != null ->
+                out += Observation.error("device.root.su_paths", pathFailure, c)
             found.isNotEmpty() -> {
                 out += Observation.confirmed("device.root.su_paths", found.joinToString(", "), c,
                     "A file named 'su' exists at these paths.")
@@ -464,7 +482,8 @@ object DeviceProbe : Probe {
         val out = mutableListOf<Observation>()
         val pm = context.packageManager
 
-        val all = try {
+        // The explicit type keeps the empty-array fallback inferable.
+        val all: Array<FeatureInfo> = try {
             pm.systemAvailableFeatures
         } catch (t: Throwable) {
             out += Observation.error("device.features", t, c)
