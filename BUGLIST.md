@@ -5,6 +5,7 @@ it was fixed in. Bugs come from what the tester reports, plus what verification 
 
 | ID | Description | Status | Found in | Fixed in |
 |---|---|---|---|---|
+| MC-002 | `CodecProbe` read the encoder bitrate range from `MediaCodecInfo.EncoderCapabilities.bitrateRange`, which does not exist — `EncoderCapabilities` carries quality, complexity and bitrate *modes*; the supported bitrate range lives on `VideoCapabilities`/`AudioCapabilities`. | FIXED | 0.1.0 (pre-release) | 0.1.0 |
 | MC-001 | `import androidx.compose.foundation.lazy.item` does not exist; `item` is a `LazyListScope` member and needs no import. Broke the first skeleton build. | FIXED | 0.1.0 (pre-commit) | 0.1.0 |
 
 ## Open verification gaps (not bugs — untested surface)

@@ -336,7 +336,13 @@ object CodecProbe : Probe {
                 out += Observation.unsupported(prefix + ".encoder_capabilities", C,
                     "getEncoderCapabilities() returned null.")
             } else {
-                out += guarded(prefix + ".encoder_bitrate_range_bps") { rangeText(ec.bitrateRange) }
+                // The supported bitrate range lives on Video/AudioCapabilities, not on
+                // EncoderCapabilities: the encoder object only carries quality, complexity and
+                // bitrate MODES. Reading it from the right place keeps the value meaningful.
+                out += guarded(prefix + ".encoder_bitrate_range_bps") {
+                    caps.videoCapabilities?.bitrateRange?.let { rangeText(it) }
+                        ?: caps.audioCapabilities?.bitrateRange?.let { rangeText(it) }
+                }
                 out += guarded(prefix + ".encoder_quality_range") { rangeText(ec.qualityRange) }
                 out += guarded(prefix + ".encoder_complexity_range") { rangeText(ec.complexityRange) }
                 val modes = listOf(
