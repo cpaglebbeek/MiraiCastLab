@@ -1,0 +1,11 @@
+{
+  "project": "MiraiCastLab",
+  "version": "0.1.0",
+  "versionCode": 1,
+  "buildName": "Mirai",
+  "releaseName": "Mirai-1",
+  "codenameTheme": "Wireless display and projection pioneers, numbered per release",
+  "date": "2026-08-30",
+  "stable": false,
+  "notes": "First build. Software complete on the phone side; all vehicle-side results NOT_TESTED."
+}
