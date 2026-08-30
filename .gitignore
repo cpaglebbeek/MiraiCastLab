@@ -14,3 +14,14 @@ local.properties
 /reports/*
 !/reports/.gitkeep
 /dist/
+
+# Secrets never belong in this repo. The app needs none today - it has no backend, no account and
+# no INTERNET permission - so these are preventive: the only source for a secret is ClaudeSecrets.
+.env
+.env.*
+!.env.example
+*.key
+*.jks
+*.keystore
+keystore.properties
+signing.properties

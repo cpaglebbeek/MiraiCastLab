@@ -21,6 +21,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import nl.icthorse.miraicastlab.ui.LabColors
 import nl.icthorse.miraicastlab.core.SessionLogger
 import kotlin.math.max
 import kotlin.math.min
@@ -75,10 +76,34 @@ private fun pointerTypeName(type: PointerType): String = when (type) {
 
 // --------------------------------------------------------------------------- palette
 
+/*
+ * Two kinds of colour live in this file and they must not be confused.
+ *
+ * 1. CHROME - the frame around the measurement: bands, labels, the sweep dial, the touch crosshair.
+ *    These are ordinary UI and reference the shared tokens in LabColors, so the scene looks like the
+ *    rest of the app and one palette change moves everything.
+ *
+ * 2. CALIBRATION - the reference blocks, the parity squares, the pure white. These are the
+ *    measurement itself. A reference block that follows a theme is no longer a reference: the whole
+ *    point is that the tester can photograph the car screen and see whether the LINK clipped a
+ *    level, not whether the app chose a different shade. These stay fixed, on purpose, forever.
+ */
+
+// -- chrome: shared tokens, safe to restyle
 private val BandBg = Color(0xFF0D1116)
-private val Accent = Color(0xFF00E5A0)
-private val Amber = Color(0xFFFFC845)
+private val Accent = LabColors.Accent
+private val Amber = LabColors.Inferred
+private val Alarm = LabColors.Error
 private val GridLine = Color(0x3355708A)
+private val DialBg = LabColors.Surface
+
+// -- calibration: fixed by measurement intent, never themed
+/** The "off" state of the parity squares. Must stay near-black and constant to read level clipping. */
+private val ParityOff = Color(0xFF12181F)
+/** Hairline box around the audio-pulse area; deliberately a flat 8% white, not a token. */
+private val FaintOutline = Color(0x14FFFFFF)
+/** Full-bleed pulse frame. Fixed so a photograph is comparable between runs and between vehicles. */
+private val PulseFrame = Color(0xFFFF6B6B)
 
 // --------------------------------------------------------------------------- top level
 
@@ -178,7 +203,7 @@ private fun DrawScope.drawParityBlocks(e: SceneEngine, c: NativeCanvas, cx: Floa
         val period = 1 shl i
         val on = (frame / period) % 2L == 0L
         val x = startX + i * (s + gap)
-        drawRect(if (on) Color.White else Color(0xFF12181F), Offset(x, top), Size(s, s))
+        drawRect(if (on) Color.White else ParityOff, Offset(x, top), Size(s, s))
         drawRect(GridLine, Offset(x, top), Size(s, s), style = Stroke(width = 1f))
     }
     e.pSmall.textAlign = Paint.Align.CENTER
@@ -206,7 +231,7 @@ private fun DrawScope.drawSweepDial(
     u: Float,
     frame: Long,
 ) {
-    drawCircle(Color(0xFF141A22), r * 1.18f, Offset(cx, cy))
+    drawCircle(DialBg, r * 1.18f, Offset(cx, cy))
     drawCircle(GridLine, r * 1.18f, Offset(cx, cy), style = Stroke(width = max(1f, u * 0.12f)))
     val inner = r * 0.60f
     val stroke = max(2f, r * 0.075f)
@@ -495,7 +520,7 @@ private fun greyColor(v: Int): Color {
 // --------------------------------------------------------------------------- bouncing object
 
 private fun DrawScope.drawBall(e: SceneEngine, ax: Float, ay: Float, aw: Float, ah: Float, u: Float) {
-    drawRect(Color(0x14FFFFFF), Offset(ax, ay), Size(aw, ah), style = Stroke(width = 1f))
+    drawRect(FaintOutline, Offset(ax, ay), Size(aw, ah), style = Stroke(width = 1f))
     val rMax = max(3f, u * 1.6f)
     val n = e.trailCount
     // Newest last so the head sits on top of its own trail.
@@ -508,7 +533,7 @@ private fun DrawScope.drawBall(e: SceneEngine, ax: Float, ay: Float, aw: Float, 
     val bx = ax + e.ballX * aw
     val by = ay + e.ballY * ah
     drawCircle(Color.White, rMax * 1.5f, Offset(bx, by))
-    drawCircle(Color(0xFFFF3D71), rMax * 0.55f, Offset(bx, by))
+    drawCircle(Alarm, rMax * 0.55f, Offset(bx, by))
 }
 
 // --------------------------------------------------------------------------- overlays
@@ -523,7 +548,7 @@ private fun DrawScope.drawGridOverlay(w: Float, h: Float, u: Float) {
     }
     // 5% and 10% safe areas: what a receiver with overscan eats first.
     drawRect(Amber.copy(alpha = 0.55f), Offset(w * 0.05f, h * 0.05f), Size(w * 0.90f, h * 0.90f), style = Stroke(width = max(1f, u * 0.2f)))
-    drawRect(Color(0xFFFF6B6B).copy(alpha = 0.55f), Offset(w * 0.10f, h * 0.10f), Size(w * 0.80f, h * 0.80f), style = Stroke(width = max(1f, u * 0.2f)))
+    drawRect(PulseFrame.copy(alpha = 0.55f), Offset(w * 0.10f, h * 0.10f), Size(w * 0.80f, h * 0.80f), style = Stroke(width = max(1f, u * 0.2f)))
 }
 
 /** Full-screen alignment pattern: grid, safe areas, corner markers, centre cross. */
@@ -606,7 +631,7 @@ private const val PULSE_VISIBLE_NANOS = 400_000_000L
 /** Persistent crosshair at the last touch: it survives the finger lifting, on purpose. */
 private fun DrawScope.drawTouchIndicator(e: SceneEngine, c: NativeCanvas, w: Float, h: Float, u: Float) {
     if (e.touchX < 0f) return
-    val col = if (e.touchDown) Color(0xFFFF3D71) else Amber
+    val col = if (e.touchDown) Alarm else Amber
     drawLine(col.copy(alpha = 0.45f), Offset(0f, e.touchY), Offset(w, e.touchY), strokeWidth = max(1f, u * 0.15f))
     drawLine(col.copy(alpha = 0.45f), Offset(e.touchX, 0f), Offset(e.touchX, h), strokeWidth = max(1f, u * 0.15f))
     drawCircle(col, u * 2.4f, Offset(e.touchX, e.touchY), style = Stroke(width = max(2f, u * 0.3f)))

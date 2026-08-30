@@ -212,66 +212,42 @@ class InputCaptureView(context: Context) : View(context) {
     private fun facts(deviceId: Int): InputDeviceFacts? =
         deviceCache.getOrPut(deviceId) { InputFacts.factsFor(deviceId) }
 
-    private fun report(hook: String, e: MotionEvent) {
-        val cb = onEvent ?: return
-        if (!capturing) return
-        val f = facts(e.deviceId)
-        val now = SystemClock.uptimeMillis()
-        val action = e.actionMasked
-        val captured = CapturedEvent(
+    /**
+     * Builds the part of a [CapturedEvent] that is identical for every input event: who sent it,
+     * over which source, and when.
+     *
+     * Motion and key events differ only in the pointer-shaped fields, so those default here to the
+     * "no pointer" values a KeyEvent already carries and the motion path overrides them with copy().
+     * Keeping the device-identity block in ONE place matters more than it looks: this is the block
+     * that answers "did this event come from the Toyota?", and two copies drifting apart would
+     * quietly change what the touch-back experiment reports.
+     */
+    private fun baseEvent(
+        hook: String,
+        kind: String,
+        typeName: String,
+        deviceId: Int,
+        source: Int,
+        metaState: Int,
+        eventTimeMs: Long,
+        downTimeMs: Long,
+        isDownLike: Boolean,
+        keyCode: String? = null,
+    ): CapturedEvent {
+        val f = facts(deviceId)
+        return CapturedEvent(
             seq = seq.incrementAndGet(),
             hook = hook,
-            kind = "motion",
-            typeName = MotionEvent.actionToString(action),
-            deviceId = e.deviceId,
-            deviceName = f?.name ?: nameOf(e.deviceId),
+            kind = kind,
+            typeName = typeName,
+            deviceId = deviceId,
+            deviceName = f?.name ?: nameOf(deviceId),
             deviceDescriptor = f?.descriptor,
-            deviceIdentity = f?.identity ?: ("id:" + e.deviceId),
+            deviceIdentity = f?.identity ?: ("id:" + deviceId),
             deviceVirtual = f?.isVirtual,
             deviceExternal = f?.external,
-            source = e.source,
-            sourceNames = InputFacts.decodeSources(e.source).joinToString("|"),
-            x = e.x,
-            y = e.y,
-            rawX = e.rawX,
-            rawY = e.rawY,
-            pressure = e.pressure,
-            size = e.size,
-            toolType = if (e.pointerCount > 0) InputFacts.decodeToolType(e.getToolType(0)) else "none",
-            buttonState = InputFacts.decodeButtonState(e.buttonState),
-            metaState = InputFacts.decodeMetaState(e.metaState),
-            keyCode = null,
-            eventTimeMs = e.eventTime,
-            downTimeMs = e.downTime,
-            uptimeDeltaMs = now - e.eventTime,
-            isDownLike = action == MotionEvent.ACTION_DOWN ||
-                action == MotionEvent.ACTION_POINTER_DOWN ||
-                action == MotionEvent.ACTION_BUTTON_PRESS,
-            isMove = action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_HOVER_MOVE,
-            wallClockMs = System.currentTimeMillis(),
-        )
-        cb(captured)
-    }
-
-    private fun report(hook: String, e: KeyEvent) {
-        val cb = onEvent ?: return
-        if (!capturing) return
-        val f = facts(e.deviceId)
-        val now = SystemClock.uptimeMillis()
-        val captured = CapturedEvent(
-            seq = seq.incrementAndGet(),
-            hook = hook,
-            kind = "key",
-            typeName = if (e.action == KeyEvent.ACTION_DOWN) "KEY_DOWN"
-            else if (e.action == KeyEvent.ACTION_UP) "KEY_UP" else "KEY_MULTIPLE",
-            deviceId = e.deviceId,
-            deviceName = f?.name ?: nameOf(e.deviceId),
-            deviceDescriptor = f?.descriptor,
-            deviceIdentity = f?.identity ?: ("id:" + e.deviceId),
-            deviceVirtual = f?.isVirtual,
-            deviceExternal = f?.external,
-            source = e.source,
-            sourceNames = InputFacts.decodeSources(e.source).joinToString("|"),
+            source = source,
+            sourceNames = InputFacts.decodeSources(source).joinToString("|"),
             x = Float.NaN,
             y = Float.NaN,
             rawX = Float.NaN,
@@ -280,14 +256,65 @@ class InputCaptureView(context: Context) : View(context) {
             size = Float.NaN,
             toolType = "-",
             buttonState = "-",
-            metaState = InputFacts.decodeMetaState(e.metaState),
-            keyCode = KeyEvent.keyCodeToString(e.keyCode),
-            eventTimeMs = e.eventTime,
-            downTimeMs = e.downTime,
-            uptimeDeltaMs = now - e.eventTime,
-            isDownLike = e.action == KeyEvent.ACTION_DOWN,
+            metaState = InputFacts.decodeMetaState(metaState),
+            keyCode = keyCode,
+            eventTimeMs = eventTimeMs,
+            downTimeMs = downTimeMs,
+            uptimeDeltaMs = SystemClock.uptimeMillis() - eventTimeMs,
+            isDownLike = isDownLike,
             isMove = false,
             wallClockMs = System.currentTimeMillis(),
+        )
+    }
+
+    private fun report(hook: String, e: MotionEvent) {
+        val cb = onEvent ?: return
+        if (!capturing) return
+        val action = e.actionMasked
+        val captured = baseEvent(
+            hook = hook,
+            kind = "motion",
+            typeName = MotionEvent.actionToString(action),
+            deviceId = e.deviceId,
+            source = e.source,
+            metaState = e.metaState,
+            eventTimeMs = e.eventTime,
+            downTimeMs = e.downTime,
+            isDownLike = action == MotionEvent.ACTION_DOWN ||
+                action == MotionEvent.ACTION_POINTER_DOWN ||
+                action == MotionEvent.ACTION_BUTTON_PRESS,
+        ).copy(
+            x = e.x,
+            y = e.y,
+            rawX = e.rawX,
+            rawY = e.rawY,
+            pressure = e.pressure,
+            size = e.size,
+            toolType = if (e.pointerCount > 0) InputFacts.decodeToolType(e.getToolType(0)) else "none",
+            buttonState = InputFacts.decodeButtonState(e.buttonState),
+            isMove = action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_HOVER_MOVE,
+        )
+        cb(captured)
+    }
+
+    private fun report(hook: String, e: KeyEvent) {
+        val cb = onEvent ?: return
+        if (!capturing) return
+        val captured = baseEvent(
+            hook = hook,
+            kind = "key",
+            typeName = when (e.action) {
+                KeyEvent.ACTION_DOWN -> "KEY_DOWN"
+                KeyEvent.ACTION_UP -> "KEY_UP"
+                else -> "KEY_MULTIPLE"
+            },
+            deviceId = e.deviceId,
+            source = e.source,
+            metaState = e.metaState,
+            eventTimeMs = e.eventTime,
+            downTimeMs = e.downTime,
+            isDownLike = e.action == KeyEvent.ACTION_DOWN,
+            keyCode = KeyEvent.keyCodeToString(e.keyCode),
         )
         cb(captured)
     }
