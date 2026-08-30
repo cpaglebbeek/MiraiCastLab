@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylised screen with a cast wave: the app's subject in one glyph. -->
+    <path
+        android:fillColor="#00E5A0"
+        android:pathData="M30,36h48a4,4 0 0 1 4,4v28a4,4 0 0 1 -4,4h-48a4,4 0 0 1 -4,-4v-28a4,4 0 0 1 4,-4zM30,42v24h48v-24z" />
+    <path
+        android:fillColor="#00E5A0"
+        android:pathData="M34,64h6a6,6 0 0 0 -6,-6zM34,54a16,16 0 0 1 16,16h-5a11,11 0 0 0 -11,-11zM34,48a22,22 0 0 1 22,22h-5a17,17 0 0 0 -17,-17z" />
+</vector>

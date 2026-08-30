@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">MiraiCast Lab</string>
+    <string name="scene_title">Diagnostic Test Scene</string>
+    <string name="projection_channel_name">Screen capture experiment</string>
+    <string name="projection_notification_title">MiraiCast Lab is capturing the screen</string>
+    <string name="projection_notification_text">MediaProjection experiment running. Stop it from the app.</string>
+</resources>
