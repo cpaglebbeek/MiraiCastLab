@@ -1,0 +1,6066 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>MiraiCast Lab Architectuur</title>
+<!--
+  ============================================================
+  MiraiCast Lab — interactieve architectuurviewer  v0.1.0
+  ============================================================
+
+  Repo:   MiraiCastLab (nl.icthorse.miraicastlab) — v0.1.0 "Mirai-1"
+  Basis:  Meta_Master/templates/viewer_template.html v0.1.0
+
+  Standalone single-file HTML: geen CDN, geen externe scripts of
+  stylesheets, werkt via file://. Deterministisch: in het renderpad
+  zit geen wall-clock-tijd en geen toevalsgenerator, dus dezelfde
+  view levert altijd exact dezelfde tekening op.
+
+  Views (5):  Conceptueel · Logisch · Fysiek · Transacties · Journeys
+  Animatie:   Transacties (3 scenario's) + Journeys (2 scenario's),
+              met Play / Pause / Step / Loop / snelheid.
+  Notatie:    ArchiMate <-> Dragon1 — zelfde notatie-agnostische
+              model-JSON, ander renderpad.
+  DSL:        import + export van architectuur/MiraiCastLab_archdsl.dsl
+
+  HERKOMST — elk element, elke relatie en elke animatiestap is
+  herleidbaar tot een bron in de repo. Die bron staat per element in
+  het veld `src` en is zichtbaar als tooltip. Wat in de repo niet is
+  vastgelegd draagt een zichtbare <<TBD>>-markering in het label; er
+  is niets aangevuld met een plausibele aanname.
+
+  Bronnen:
+    docs/architecture.md                          (component-map, evidence-model,
+                                                   cause-and-effect, non-goals)
+    docs/DEPENDENCIES.md                          (runtime, build, platform-surfaces)
+    docs/PRINCIPLES.md                            (P1-P12)
+    SAFETY.md                                     (de grens die dit project niet overgaat)
+    docs/toyota-mirai-2025-test-procedure.md      (de journeys)
+    README.md · ARCHITECTURE.md · BUILD.md · version.json
+    app/src/main/AndroidManifest.xml              (componenten, permissies, queries)
+    core/ProbeRegistry.kt (12 probes) · core/Probe.kt (safeObserve)
+    ui/LabNavHost.kt (14 destinations) · projection/CaptureEngine.kt
+    report/ReportGenerator.kt · report/ReportScreen.kt · tools/*/README.md
+  ============================================================
+-->
+<style>
+:root {
+  /* ArchiMate-conventie kleuren — bron: Dragon1Website/docs/COMPARISON_AMODELER.md */
+  --c-motivation:  #ccccff;
+  --c-strategy:    #ffc685;
+  --c-business:    #ffffb5;
+  --c-application: #b5ffff;
+  --c-technology:  #c9e7b7;
+  --c-impl:        #ffe0e0;
+  --c-risk:        #fff1f2;
+  --c-c4:          #1168bd;
+  --c-dragon1:     #ffd700;
+  --c-other:       #e8e8e8;
+  --c-stroke:      #6b6b6b;
+  --c-stroke-motivation:  #7c3aed;
+  --c-stroke-strategy:    #ea580c;
+  --c-stroke-business:    #ca8a04;
+  --c-stroke-application: #0284c7;
+  --c-stroke-technology:  #16a34a;
+  --c-stroke-risk:        #e11d48;
+  --c-arrow:    #444;
+  --c-warning:  #d9534f;
+  --c-ok:       #2c8a2c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  background: #f4f4f4;
+  color: #222;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.toolbar h1 {
+  font-size: 15px;
+  margin: 0 18px 0 0;
+  font-weight: 600;
+  color: #333;
+}
+.toolbar label, .toolbar select, .toolbar button {
+  font-family: inherit;
+  font-size: 13px;
+}
+.toolbar select {
+  padding: 5px 8px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+}
+.toolbar button, .filebtn {
+  padding: 5px 12px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 13px;
+}
+.toolbar button:hover, .filebtn:hover { background: #eef; }
+.toolbar button.active {
+  background: #2c5aa0;
+  color: #fff;
+  border-color: #1e3f70;
+}
+.toolbar .filebtn input { display: none; }
+.toolbar .sep { width: 1px; height: 22px; background: #ccc; margin: 0 4px; }
+.toolbar .right { margin-left: auto; font-size: 12px; color: #666; }
+.toolbar .notation-toggle {
+  display: inline-flex;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.toolbar .notation-toggle button {
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid #aaa;
+}
+.toolbar .notation-toggle button:last-child { border-right: none; }
+.anim-controls {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #fff8d8;
+  border: 1px solid #d4b300;
+  border-radius: 3px;
+}
+.anim-controls.visible { display: inline-flex; }
+.anim-controls input[type=range] { width: 80px; }
+.anim-controls label { font-size: 11px; color: #555; }
+#stage {
+  padding: 18px;
+  overflow: auto;
+}
+#canvas-wrap {
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  width: max-content;
+  margin: 0 auto;
+}
+svg#canvas { display: block; background: #fff; }
+.info {
+  margin: 8px 16px 0;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  font-size: 12px;
+  color: #555;
+  border-radius: 3px;
+}
+.info b { color: #222; }
+.log {
+  margin: 8px 16px;
+  padding: 8px 12px;
+  background: #fff8d8;
+  border-left: 4px solid #d4b300;
+  font-size: 12px;
+  font-family: "Consolas", "Monaco", monospace;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.log.empty { display: none; }
+.legend-block {
+  margin: 8px 16px 16px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  font-size: 12px;
+  border-radius: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+.legend-block .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-block .sw {
+  width: 18px; height: 12px;
+  border: 1px solid var(--c-stroke);
+  display: inline-block;
+}
+/* Element-styling */
+.elem-rect { stroke: var(--c-stroke); stroke-width: 1; }
+.elem-label { font-size: 12px; fill: #222; pointer-events: none; }
+.elem-type-banner { font-size: 9px; fill: #555; font-style: italic; pointer-events: none; }
+.rel-line { stroke: var(--c-arrow); stroke-width: 1.5; fill: none; }
+.rel-line.dashed { stroke-dasharray: 5,4; }
+.rel-line.dotted { stroke-dasharray: 2,3; }
+.rel-label { font-size: 10px; fill: #444; pointer-events: none; }
+.rel-label-bg { fill: #fff; stroke: none; }
+/* Animatie-token */
+.anim-token {
+  fill: #ff6b35;
+  stroke: #c44616;
+  stroke-width: 1.5;
+}
+/* Dragon1-modus: aanvullende styling */
+.notation-dragon1 .elem-rect,
+.notation-dragon1 .elem-shape { stroke-width: 1.8; }
+.notation-dragon1 .elem-type-banner { display: none; }
+/* Dragon1 concept-shape: ovaal, geen scherpe hoeken — bron: DRAGON1_VISUAL_LANGUAGE.md */
+.notation-dragon1 .elem-shape { fill: var(--c-other); stroke: var(--c-stroke); }
+/* ArchiMate-modus banner zichtbaar */
+.notation-archimate .elem-type-banner { display: block; }
+/* Heat-styling (data-driven) — actief alleen in Dragon1-modus.
+   Heat-attributen: data-criticality / data-completion / data-cost (0-1 genormaliseerd).
+   Interpolatie groen→geel→rood gebeurt JS-side (zie heatToColor); fallback hieronder. */
+:root {
+  --heat-low:  #22c55e;  /* groen */
+  --heat-mid:  #eab308;  /* geel */
+  --heat-high: #ef4444;  /* rood */
+}
+.notation-dragon1 .elem-shape { transition: fill 240ms ease; }
+.heat-dropdown { display: inline-flex; align-items: center; gap: 6px; }
+.heat-dropdown select:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Landscape-backdrop — bron: docs/DRAGON1_VISUAL_LANGUAGE.md §2 (landscape als backdrop).
+   View-afhankelijk: Conceptueel + Logisch aan, Fysiek + Transacties + Journeys uit. */
+.landscape-backdrop rect { opacity: 0.18; pointer-events: none; }
+.landscape-backdrop text {
+  font-size: 28px; font-weight: 700;
+  fill: var(--c-stroke); opacity: 0.22;
+  pointer-events: none; user-select: none;
+}
+/* Sketch-mode — bron: docs/DRAGON1_VISUAL_LANGUAGE.md §4 (sketch / artist-impression).
+   feTurbulence-filter met fixed seed=42 → deterministisch. Labels in systeem-cursive
+   (geen Google Fonts om standalone/file:// compatibiliteit te bewaren). */
+.notation-dragon1.sketch-mode .elem-shape,
+.notation-dragon1.sketch-mode .rel-line { filter: url(#roughen); }
+.notation-dragon1.sketch-mode .elem-label,
+.notation-dragon1.sketch-mode .rel-label {
+  font-family: "Bradley Hand", "Marker Felt", "Comic Sans MS", cursive;
+}
+.btn-render-mode.active { background: #2c5aa0; color: #fff; border-color: #1e3f70; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1 id="viewer-title">MiraiCast Lab</h1>
+
+  <label>View:
+    <select id="viewSelect"></select>
+  </label>
+
+  <span class="sep"></span>
+
+  <span style="font-size:11px;color:#666">Notatie:</span>
+  <div class="notation-toggle" id="notationToggle">
+    <button data-notation="archimate" class="active">ArchiMate</button>
+    <button data-notation="dragon1">Dragon1</button>
+  </div>
+
+  <span class="sep"></span>
+
+  <label class="heat-dropdown" title="Data-driven heat — Dragon1-eigen, kleurt elementen op attribuut (genormaliseerd 0-1). Niet actief in ArchiMate-modus.">
+    Heat:
+    <select id="heatSelect" disabled>
+      <option value="off">off</option>
+      <option value="criticality">criticality</option>
+      <option value="completion">completion</option>
+      <option value="cost">cost</option>
+    </select>
+  </label>
+
+  <button id="btnSketch" class="btn-render-mode" disabled title="Sketch-mode — Dragon1's artist-impression rendering (feTurbulence-filter + cursive font). Alleen actief in Dragon1-modus.">&#9999;&#xFE0F; Sketch</button>
+
+  <span class="sep"></span>
+
+  <div class="anim-controls" id="animControls">
+    <button id="btnPlay" title="Play">&#9654;</button>
+    <button id="btnPause" title="Pause">&#10074;&#10074;</button>
+    <button id="btnStep" title="Step">&#9197;</button>
+    <button id="btnLoop" title="Loop toggle" class="active">&#128257;</button>
+    <label>snelh.</label>
+    <input type="range" id="speedSlider" min="200" max="3000" value="1200" step="100">
+    <select id="scenarioSelect" title="Scenario (Transacties / Journeys)" style="max-width:340px"></select>
+    <span id="scenarioLabel" style="font-size:11px;color:#444"></span>
+  </div>
+
+  <span class="sep"></span>
+
+  <button id="btnExportJson" title="Download .json (intern formaat)">&#8595; JSON</button>
+  <button id="btnExportDsl" title="Download .dsl (ArchDSL DSL-B)">&#8595; DSL</button>
+  <button id="btnExportArchimate" title="Download .archimate (Archi v5)">&#8595; .archimate</button>
+  <button id="btnExportSvg" title="Download huidig diagram als .svg">&#8595; SVG</button>
+
+  <span class="sep"></span>
+
+  <label class="filebtn" title="Importeer intern .json">&#8593; JSON<input type="file" id="impJson" accept=".json,application/json"></label>
+  <label class="filebtn" title="Importeer ArchDSL .dsl">&#8593; DSL<input type="file" id="impDsl" accept=".dsl,.txt,text/plain"></label>
+  <label class="filebtn" title="Importeer .archimate (Archi v5)">&#8593; .archimate<input type="file" id="impArchimate" accept=".archimate,.xml,application/xml,text/xml"></label>
+
+  <span class="sep"></span>
+
+  <button id="btnReset" title="Herstel ingebouwde model">&#8634; Reset</button>
+
+  <span class="right">MiraiCastLab v0.1.0 &laquo;Mirai-1&raquo; &middot; 5 views &middot; deterministisch &middot; standalone (file://)</span>
+</div>
+
+<div id="info" class="info"></div>
+<div id="log" class="log empty"></div>
+
+<div id="stage">
+  <div id="canvas-wrap">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="1560" height="980" viewBox="0 0 1560 980" class="notation-archimate"></svg>
+  </div>
+</div>
+
+<div class="legend-block" id="legend"></div>
+
+<script>
+/* ============================================================
+ * MiraiCast Lab — architectuurviewer v0.1.0
+ * Standalone, deterministisch, file://-compatible.
+ * Engine overgenomen uit Meta_Master/templates/viewer_template.html;
+ * uitgebreid met per-view layout, scenario-keuze en label-wrap.
+ * ============================================================ */
+
+/* --- Type -> Layer mapping (ArchiMate 3.2 + C4 + Dragon1) --- */
+const TYPE_LAYER = {
+  // Motivation
+  stakeholder:'motivation', goal:'motivation', outcome:'motivation',
+  requirement:'motivation', constraint:'motivation', driver:'motivation',
+  assessment:'motivation', principle:'motivation',
+  // Strategy
+  capability:'strategy', resource:'strategy', valuestream:'strategy',
+  courseofaction:'strategy',
+  // Business
+  businessactor:'business', businessrole:'business', businessprocess:'business',
+  businessfunction:'business', businessservice:'business',
+  businessobject:'business', businessinteraction:'business',
+  businessevent:'business', businesscollaboration:'business',
+  // Application
+  applicationcomponent:'application', applicationservice:'application',
+  applicationinterface:'application', applicationcollaboration:'application',
+  applicationinteraction:'application', applicationevent:'application',
+  applicationprocess:'application', applicationfunction:'application',
+  dataobject:'application',
+  // Technology
+  node:'technology', equipment:'technology', systemsoftware:'technology',
+  communicationnetwork:'technology', device:'technology',
+  technologyservice:'technology', path:'technology', artifact:'technology',
+  // Implementation
+  workpackage:'impl', deliverable:'impl', plateau:'impl', gap:'impl',
+  // Risk
+  threatactor:'risk', threatagent:'risk', vulnerability:'risk',
+  risk:'risk', controlmeasure:'risk',
+  // C4
+  system:'c4', container:'c4', component:'c4', person:'c4',
+  // Dragon1-eigen
+  strategic:'dragon1', operational:'dragon1', capabilities:'dragon1'
+};
+
+/* --- Layer -> fill kleur (ArchiMate-conventie) --- */
+const LAYER_FILL = {
+  motivation:  '#ccccff', strategy: '#ffc685', business: '#ffffb5',
+  application: '#b5ffff', technology: '#c9e7b7', impl: '#ffe0e0',
+  risk: '#fff1f2', c4: '#1168bd', dragon1: '#ffd700', other: '#e8e8e8'
+};
+const LAYER_STROKE = {
+  motivation:  '#7c3aed', strategy: '#ea580c', business: '#ca8a04',
+  application: '#0284c7', technology: '#16a34a', impl: '#94a3b8',
+  risk: '#e11d48', c4: '#0b4d8c', dragon1: '#b8860b', other: '#6b6b6b'
+};
+const LAYER_LABEL = {
+  motivation: 'Motivation', strategy: 'Strategy', business: 'Business',
+  application: 'Application', technology: 'Technology',
+  impl: 'Implementation', risk: 'Risk', c4: 'C4', dragon1: 'Dragon1', other: 'Other'
+};
+
+/* --- ArchiMate type-banner labels (PascalCase pretty-print) --- */
+const TYPE_BANNER = {
+  businessactor: 'BusinessActor', businessrole: 'BusinessRole',
+  businessprocess: 'BusinessProcess', businessfunction: 'BusinessFunction',
+  businessservice: 'BusinessService', businessobject: 'BusinessObject',
+  applicationcomponent: 'ApplicationComponent',
+  applicationservice: 'ApplicationService',
+  applicationinterface: 'ApplicationInterface',
+  dataobject: 'DataObject',
+  node: 'Node', systemsoftware: 'SystemSoftware',
+  communicationnetwork: 'CommunicationNetwork', device: 'Device',
+  driver: 'Driver', goal: 'Goal', requirement: 'Requirement',
+  stakeholder: 'Stakeholder', constraint: 'Constraint',
+  capability: 'Capability', resource: 'Resource',
+  valuestream: 'ValueStream',
+  threatactor: 'ThreatActor', vulnerability: 'Vulnerability',
+  risk: 'Risk', controlmeasure: 'ControlMeasure',
+  workpackage: 'WorkPackage', deliverable: 'Deliverable',
+  plateau: 'Plateau', gap: 'Gap',
+  system: 'System', container: 'Container', component: 'Component',
+  person: 'Person',
+  strategic: 'Strategic', operational: 'Operational',
+  capabilities: 'Capabilities',
+  principle: 'Principle', assessment: 'Assessment', outcome: 'Outcome',
+  businessevent: 'BusinessEvent', businesscollaboration: 'BusinessCollaboration',
+  applicationfunction: 'ApplicationFunction', applicationprocess: 'ApplicationProcess',
+  applicationcollaboration: 'ApplicationCollaboration',
+  artifact: 'Artifact', technologyservice: 'TechnologyService',
+  equipment: 'Equipment', path: 'Path', courseofaction: 'CourseOfAction'
+};
+
+/* --- Relatie-type-inferentie tabel (subset uit AModeler parser.js v3) --- */
+const REL_INFER = {
+  'businessactor->businessprocess': 'assignment',
+  'businessactor->businessrole': 'assignment',
+  'businessrole->businessprocess': 'assignment',
+  'businessprocess->businessservice': 'realization',
+  'businessprocess->businessobject': 'access',
+  'businessservice->businessprocess': 'serving',
+  'applicationcomponent->applicationservice': 'realization',
+  'applicationcomponent->applicationcomponent': 'serving',
+  'applicationcomponent->dataobject': 'access',
+  'applicationcomponent->businessprocess': 'serving',
+  'applicationservice->businessservice': 'serving',
+  'applicationservice->businessprocess': 'serving',
+  'node->applicationcomponent': 'assignment',
+  'node->systemsoftware': 'assignment',
+  'systemsoftware->applicationcomponent': 'assignment',
+  'systemsoftware->dataobject': 'realization',
+  'communicationnetwork->node': 'serving',
+  'driver->goal': 'influence',
+  'goal->requirement': 'realization',
+  'requirement->businessprocess': 'realization',
+  'requirement->applicationcomponent': 'realization',
+  // --- MiraiCast Lab: aanvullingen zodat elke relatie in dit model een
+  //     correct ArchiMate-type krijgt zonder :type in de DSL te zetten.
+  'assessment->goal': 'influence',
+  'principle->goal': 'realization',
+  'capability->goal': 'realization',
+  'requirement->principle': 'realization',
+  'constraint->principle': 'realization',
+  'applicationcomponent->applicationfunction': 'assignment',
+  'applicationfunction->applicationcomponent': 'triggers',
+  'applicationfunction->dataobject': 'access',
+  'applicationcomponent->artifact': 'access',
+  'applicationcomponent->systemsoftware': 'serving',
+  'applicationcomponent->node': 'serving',
+  'dataobject->applicationcomponent': 'access',
+  'dataobject->dataobject': 'association',
+  'dataobject->artifact': 'realization',
+  'constraint->systemsoftware': 'influence',
+  'systemsoftware->systemsoftware': 'triggers',
+  'systemsoftware->applicationcomponent': 'serving',
+  'systemsoftware->node': 'assignment',
+  'device->systemsoftware': 'assignment',
+  'node->device': 'serving',
+  'node->artifact': 'access',
+  'node->systemsoftware': 'assignment',
+  'artifact->node': 'access',
+  'artifact->device': 'access',
+  'artifact->artifact': 'flow',
+  'artifact->communicationnetwork': 'association',
+  'communicationnetwork->device': 'serving',
+  'businessactor->businessprocess': 'assignment',
+  'businessprocess->businessprocess': 'triggers',
+  'businessprocess->businessevent': 'triggers',
+  'businessevent->businessprocess': 'triggers',
+  'businessevent->businessevent': 'triggers',
+  'businessevent->businessobject': 'access',
+  'businessprocess->businessobject': 'access'
+};
+function inferRelType(fromType, toType) {
+  const k = (fromType || '').toLowerCase() + '->' + (toType || '').toLowerCase();
+  return REL_INFER[k] || 'flow';
+}
+
+/* --- Relatie-styling per type --- */
+const REL_STYLE = {
+  assignment:    { dash: 'none',  marker: 'arrow',        startMarker: 'dot' },
+  realization:   { dash: '5,4',   marker: 'arrow-hollow', startMarker: 'none' },
+  serving:       { dash: '5,4',   marker: 'arrow',        startMarker: 'none' },
+  access:        { dash: '5,4',   marker: 'arrow',        startMarker: 'none' },
+  flow:          { dash: '5,4',   marker: 'arrow',        startMarker: 'none' },
+  influence:     { dash: '2,3',   marker: 'arrow',        startMarker: 'none' },
+  composition:   { dash: 'none',  marker: 'none',         startMarker: 'diamond' },
+  aggregation:   { dash: 'none',  marker: 'none',         startMarker: 'diamond-hollow' },
+  triggers:      { dash: '5,4',   marker: 'arrow',        startMarker: 'none' },
+  association:   { dash: 'none',  marker: 'none',         startMarker: 'none' }
+};
+
+/* ============================================================
+ * DEFAULT MODEL — MiraiCast Lab
+ * Notatie-agnostisch: elementen + relaties + views + scenario's.
+ * Elk element draagt `src` = de repo-bron waaruit het is afgeleid;
+ * elke relatie draagt `src` idem. Zie de kopcommentaar voor de
+ * volledige bronnenlijst. <<TBD>> = niet vastgelegd in de repo.
+ * ============================================================ */
+/* MODEL-BEGIN */
+const DEFAULT_MODEL = {
+  "meta": {
+    "title": "MiraiCast Lab - Architecture",
+    "subtitle": "Z Fold x Toyota Mirai 2025 capability explorer - v0.1.0 Mirai-1",
+    "language": "archimate",
+    "repo": "MiraiCastLab",
+    "generated_from": "docs/architecture.md, docs/DEPENDENCIES.md, docs/PRINCIPLES.md, SAFETY.md, docs/toyota-mirai-2025-test-procedure.md, README.md, ARCHITECTURE.md, BUILD.md, AndroidManifest.xml, core/ProbeRegistry.kt, ui/LabNavHost.kt",
+    "note": "Every element, relation and animation step is traceable to a repository source; each element carries its citation in the src field. Undocumented facts carry a visible <<TBD>> marker."
+  },
+  "elements": [
+    {
+      "id": "dr_unknown",
+      "type": "Driver",
+      "label": "Unknown: what actually works Z Fold to Mirai 2025",
+      "pos": [
+        30,
+        24
+      ],
+      "src": "README.md (opening claim)",
+      "description": "An Android capability explorer that finds out - empirically - what actually works between a non-rooted Samsung Galaxy Z Fold and a Toyota Mirai 2025 head unit."
+    },
+    {
+      "id": "dr_false",
+      "type": "Driver",
+      "label": "A false result is the thing to avoid",
+      "pos": [
+        222,
+        24
+      ],
+      "src": "docs/architecture.md §7 (non-goals)",
+      "description": "Pretending to connect would be the single easiest way to produce a false result."
+    },
+    {
+      "id": "as_state",
+      "type": "Assessment",
+      "label": "v0.1.0 Mirai-1: not yet run on a Z Fold, not yet in a vehicle",
+      "pos": [
+        414,
+        24
+      ],
+      "src": "README.md + version.json + docs/protocol-findings.md",
+      "description": "Every vehicle-side result in this repository is NOT TESTED. That is the honest state."
+    },
+    {
+      "id": "go_empirical",
+      "type": "Goal",
+      "label": "Empirical answer: picture, sound, touch back",
+      "pos": [
+        798,
+        24
+      ],
+      "src": "README.md",
+      "description": "Picture - sound - touch back. Miracast, Smart View, DeX, Android Auto."
+    },
+    {
+      "id": "go_experiments",
+      "type": "Goal",
+      "label": "Turn the question into graded experiments",
+      "pos": [
+        1182,
+        24
+      ],
+      "src": "docs/architecture.md §1",
+      "description": "Turn 'can the Z Fold show video, play sound and receive touch on a Toyota Mirai 2025?' into a set of experiments whose results are graded by how strongly they are evidenced."
+    },
+    {
+      "id": "go_evidence",
+      "type": "Goal",
+      "label": "The output is an evidence file, not a picture",
+      "pos": [
+        990,
+        24
+      ],
+      "src": "docs/architecture.md §1",
+      "description": "The app is an instrument, not a media player. The picture on the car screen is a stimulus; the output is an evidence file."
+    },
+    {
+      "id": "rq_grade",
+      "type": "Requirement",
+      "label": "Every fact carries a LabStatus",
+      "pos": [
+        30,
+        142
+      ],
+      "src": "docs/PRINCIPLES.md P1 · docs/architecture.md §3",
+      "description": "There is no code path that produces an ungraded value into the report."
+    },
+    {
+      "id": "rq_mechanical",
+      "type": "Requirement",
+      "label": "Report sections 15-18 derived mechanically from the enum",
+      "pos": [
+        222,
+        142
+      ],
+      "src": "docs/architecture.md §3 (rule 1) · report/ReportGenerator.kt",
+      "description": "NOT_TESTED and UNSUPPORTED are distinct enum constants and no code maps one to the other, so no human can quietly promote one."
+    },
+    {
+      "id": "rq_safeobserve",
+      "type": "Requirement",
+      "label": "A probe crash becomes Observation.error via safeObserve",
+      "pos": [
+        414,
+        142
+      ],
+      "src": "docs/architecture.md §3 (rule 2) · core/Probe.kt",
+      "description": "safeObserve converts any throwable into Observation.error whose note says 'the capability itself is untested'."
+    },
+    {
+      "id": "rq_missing",
+      "type": "Requirement",
+      "label": "A missing dashboard field is visible (DashboardKeys.missingFrom)",
+      "pos": [
+        606,
+        142
+      ],
+      "src": "docs/architecture.md §3 (rule 3)",
+      "description": "A blank field is an alarm, not an absence of news."
+    },
+    {
+      "id": "rq_sink",
+      "type": "Requirement",
+      "label": "Explicit NOT_TESTED: phone data says nothing about the sink",
+      "pos": [
+        798,
+        142
+      ],
+      "src": "docs/architecture.md §3 (rule 4) · docs/PRINCIPLES.md P3",
+      "description": "Modules that could tempt you (display, codec, projection) emit an explicit NOT_TESTED observation."
+    },
+    {
+      "id": "p1",
+      "type": "Principle",
+      "label": "P1 - A finding without a grade is not a finding",
+      "pos": [
+        30,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P1",
+      "description": "Every fact carries a LabStatus. If you cannot say how strongly something is evidenced, you have not finished measuring it."
+    },
+    {
+      "id": "p2",
+      "type": "Principle",
+      "label": "P2 - NOT_TESTED is not a weaker UNSUPPORTED",
+      "pos": [
+        222,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P2",
+      "description": "'We could not run the test' and 'the test showed it is absent' are different claims about the world. No function maps one to the other."
+    },
+    {
+      "id": "p3",
+      "type": "Principle",
+      "label": "P3 - Phone-side capability says nothing about the sink",
+      "pos": [
+        414,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P3",
+      "description": "The Z Fold having eight H.264 encoders tells you nothing about what the Mirai accepts."
+    },
+    {
+      "id": "p4",
+      "type": "Principle",
+      "label": "P4 - A probe crash is data, not an outage",
+      "pos": [
+        606,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P4",
+      "description": "safeObserve converts any throwable into an ERROR observation. A probe may never take the app down."
+    },
+    {
+      "id": "p5",
+      "type": "Principle",
+      "label": "P5 - Absence of evidence is stated as such",
+      "pos": [
+        798,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P5",
+      "description": "Root not detected is INFERRED, not CONFIRMED. Package-visibility failures on Android 11+ are INFERRED/NOT_TESTED, never UNSUPPORTED."
+    },
+    {
+      "id": "p6",
+      "type": "Principle",
+      "label": "P6 - The app instruments; it does not pretend to connect",
+      "pos": [
+        990,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P6",
+      "description": "Establishing a Wi-Fi Display session is not available to a third-party app on a non-rooted device. The app opens the right settings panel, then measures what changed."
+    },
+    {
+      "id": "p7",
+      "type": "Principle",
+      "label": "P7 - The safety boundary is structural, not a policy",
+      "pos": [
+        1182,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P7",
+      "description": "No INTERNET permission, so uploading is impossible rather than merely forbidden. No vehicle-bus code, so interlock interference is impossible rather than merely disallowed."
+    },
+    {
+      "id": "p8",
+      "type": "Principle",
+      "label": "P8 - Evidence is written as it happens",
+      "pos": [
+        1374,
+        260
+      ],
+      "src": "docs/PRINCIPLES.md P8",
+      "description": "Append-only JSONL, flushed per record. The moment evidence matters most is a vehicle session, which is exactly when the process is most likely to be killed."
+    },
+    {
+      "id": "p9",
+      "type": "Principle",
+      "label": "P9 - The tester is in a car",
+      "pos": [
+        30,
+        378
+      ],
+      "src": "docs/PRINCIPLES.md P9",
+      "description": "Large targets, one tap from the dashboard to any experiment, one tap back. No ADB required to run a session."
+    },
+    {
+      "id": "p10",
+      "type": "Principle",
+      "label": "P10 - Modules do not import each other",
+      "pos": [
+        222,
+        378
+      ],
+      "src": "docs/PRINCIPLES.md P10",
+      "description": "Everything depends on core. ProbeRegistry and LabNavHost are the only places that know about many modules, and they hold references, not logic."
+    },
+    {
+      "id": "p11",
+      "type": "Principle",
+      "label": "P11 - Offline, dependency-light, no assets",
+      "pos": [
+        414,
+        378
+      ],
+      "src": "docs/PRINCIPLES.md P11",
+      "description": "The diagnostic scene is generated in code. The tones are synthesised in code. Nothing here needs the network, a media file, or a licence from anyone."
+    },
+    {
+      "id": "p12",
+      "type": "Principle",
+      "label": "P12 - Comment the why",
+      "pos": [
+        606,
+        378
+      ],
+      "src": "docs/PRINCIPLES.md P12",
+      "description": "Notes on an Observation explain why a status is what it is, because in six months that note is the only thing standing between a reader and a wrong conclusion."
+    },
+    {
+      "id": "cs_rule",
+      "type": "Constraint",
+      "label": "No defeating, patching, bypassing, spoofing or disabling safety interlocks",
+      "pos": [
+        30,
+        496
+      ],
+      "src": "SAFETY.md 'The rule'",
+      "description": "Taken verbatim from section 1 of the build specification; binding on every module, every future change, every contributor - human or AI."
+    },
+    {
+      "id": "cs_can",
+      "type": "Constraint",
+      "label": "No CAN bus message injection",
+      "pos": [
+        222,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "Directly manipulates vehicle state."
+    },
+    {
+      "id": "cs_spoof",
+      "type": "Constraint",
+      "label": "No vehicle-state spoofing (park / drive / speed)",
+      "pos": [
+        414,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "Defeats the interlock by lying to it."
+    },
+    {
+      "id": "cs_firmware",
+      "type": "Constraint",
+      "label": "No patching or replacing head-unit firmware",
+      "pos": [
+        606,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "Defeats the interlock by removing it."
+    },
+    {
+      "id": "cs_aaspoof",
+      "type": "Constraint",
+      "label": "No Android Auto protocol spoofing",
+      "pos": [
+        798,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "Section 3 of the spec forbids it explicitly."
+    },
+    {
+      "id": "cs_aacat",
+      "type": "Constraint",
+      "label": "No circumventing Android Auto app-category restrictions",
+      "pos": [
+        990,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": ""
+    },
+    {
+      "id": "cs_bus",
+      "type": "Constraint",
+      "label": "No code path that transmits to a vehicle bus",
+      "pos": [
+        1182,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "No legitimate use in a capability explorer."
+    },
+    {
+      "id": "cs_evasion",
+      "type": "Constraint",
+      "label": "No detection evasion of any kind",
+      "pos": [
+        1374,
+        496
+      ],
+      "src": "SAFETY.md forbidden table",
+      "description": "Nothing here needs to hide."
+    },
+    {
+      "id": "cs_internet",
+      "type": "Constraint",
+      "label": "No INTERNET permission - uploading is impossible by construction",
+      "pos": [
+        30,
+        614
+      ],
+      "src": "SAFETY.md 'Privacy and data' · AndroidManifest.xml (no INTERNET)",
+      "description": ""
+    },
+    {
+      "id": "cs_private",
+      "type": "Constraint",
+      "label": "All evidence in app-private storage only",
+      "pos": [
+        222,
+        614
+      ],
+      "src": "SAFETY.md 'Privacy and data'",
+      "description": "filesDir/evidence and filesDir/reports. No personal data is collected."
+    },
+    {
+      "id": "cs_bench",
+      "type": "Constraint",
+      "label": "Bench, simulator or stationary vehicle only",
+      "pos": [
+        414,
+        614
+      ],
+      "src": "SAFETY.md 'Where testing belongs'",
+      "description": "Not on a public road, and not while driving."
+    },
+    {
+      "id": "cs_root",
+      "type": "Constraint",
+      "label": "No root, and no accessibility service as a workaround",
+      "pos": [
+        606,
+        614
+      ],
+      "src": "SAFETY.md 'Privacy and data' · docs/architecture.md §7",
+      "description": ""
+    },
+    {
+      "id": "cs_escal",
+      "type": "Constraint",
+      "label": "Escalation: record the limitation as a finding and stop",
+      "pos": [
+        798,
+        614
+      ],
+      "src": "SAFETY.md 'Escalation'",
+      "description": "If a future change appears to need something on the forbidden list, the correct outcome is to record the limitation as a finding - not to route around it."
+    },
+    {
+      "id": "cs_novehicle",
+      "type": "Constraint",
+      "label": "Non-goal: no vehicle interaction",
+      "pos": [
+        990,
+        614
+      ],
+      "src": "docs/architecture.md §7",
+      "description": "See SAFETY.md."
+    },
+    {
+      "id": "cs_nomiracast",
+      "type": "Constraint",
+      "label": "Non-goal: no re-implementation of Miracast",
+      "pos": [
+        1182,
+        614
+      ],
+      "src": "docs/architecture.md §7",
+      "description": "Establishing a Wi-Fi Display session is not available to a third-party app on a non-rooted Android device. The app guides and instruments; it does not connect."
+    },
+    {
+      "id": "cs_nohidden",
+      "type": "Constraint",
+      "label": "Non-goal: no hidden-API dependence in the primary path",
+      "pos": [
+        1374,
+        614
+      ],
+      "src": "docs/architecture.md §7",
+      "description": "Where a proprietary surface is probed it is reflective, guarded, isolated, and degrades to UNSUPPORTED/NOT_TESTED - never to a crash and never to a guess."
+    },
+    {
+      "id": "cap_inventory",
+      "type": "Capability",
+      "label": "Device capability inventory (12 read-only probes)",
+      "pos": [
+        30,
+        732
+      ],
+      "src": "README.md 'What it does' · core/ProbeRegistry.kt",
+      "description": ""
+    },
+    {
+      "id": "cap_wizard",
+      "type": "Capability",
+      "label": "Guided Miracast session (seven-step wizard)",
+      "pos": [
+        222,
+        732
+      ],
+      "src": "README.md · docs/toyota-mirai-2025-test-procedure.md §2",
+      "description": ""
+    },
+    {
+      "id": "cap_scene",
+      "type": "Capability",
+      "label": "Diagnostic scene on an external display",
+      "pos": [
+        414,
+        732
+      ],
+      "src": "README.md · docs/architecture.md §4.4",
+      "description": ""
+    },
+    {
+      "id": "cap_audio",
+      "type": "Capability",
+      "label": "Audio characterisation (six modes)",
+      "pos": [
+        606,
+        732
+      ],
+      "src": "README.md · test procedure §4",
+      "description": ""
+    },
+    {
+      "id": "cap_touchback",
+      "type": "Capability",
+      "label": "Touch-back measurement (3x5 target grid)",
+      "pos": [
+        798,
+        732
+      ],
+      "src": "README.md · test procedure §3",
+      "description": ""
+    },
+    {
+      "id": "cap_projection",
+      "type": "Capability",
+      "label": "MediaProjection measurement (VirtualDisplay + H.264)",
+      "pos": [
+        990,
+        732
+      ],
+      "src": "README.md · docs/architecture.md §4.5",
+      "description": ""
+    },
+    {
+      "id": "cap_matrix",
+      "type": "Capability",
+      "label": "Android Auto coexistence matrix A-F",
+      "pos": [
+        1182,
+        732
+      ],
+      "src": "README.md · test procedure §6",
+      "description": ""
+    },
+    {
+      "id": "cap_motion",
+      "type": "Capability",
+      "label": "Motion-state observation (recording only)",
+      "pos": [
+        1374,
+        732
+      ],
+      "src": "README.md · SAFETY.md 'motion-state experiment'",
+      "description": ""
+    },
+    {
+      "id": "cap_report",
+      "type": "Capability",
+      "label": "Graded reporting: 20 sections, Markdown / JSON / CSV",
+      "pos": [
+        30,
+        850
+      ],
+      "src": "README.md · report/ReportGenerator.kt",
+      "description": ""
+    },
+    {
+      "id": "mod_core",
+      "type": "ApplicationComponent",
+      "label": "core - the contract everything depends on",
+      "pos": [
+        600,
+        148
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units (8 files)",
+      "description": "LabStatus, LabCategory, Observation, LogRecord, SessionLogger, Probe, LabPermissions, Json, DashboardKeys, ProbeRegistry."
+    },
+    {
+      "id": "c_evidence",
+      "type": "ApplicationComponent",
+      "label": "Evidence.kt - LabStatus, LabCategory",
+      "pos": [
+        30,
+        24
+      ],
+      "src": "docs/architecture.md §4.1",
+      "description": "Depends on nothing; depended on by everything."
+    },
+    {
+      "id": "c_probe",
+      "type": "ApplicationComponent",
+      "label": "Probe / safeObserve / probeValue",
+      "pos": [
+        220,
+        24
+      ],
+      "src": "docs/architecture.md §4.1 · core/Probe.kt",
+      "description": "The read-only probe contract and its failure discipline. Used by all 12 probes."
+    },
+    {
+      "id": "c_sessionlogger",
+      "type": "ApplicationComponent",
+      "label": "SessionLogger - the single sink",
+      "pos": [
+        410,
+        24
+      ],
+      "src": "docs/architecture.md §4.1",
+      "description": "In-memory StateFlow plus append-only JSONL on disk. One process, one log."
+    },
+    {
+      "id": "c_proberegistry",
+      "type": "ApplicationComponent",
+      "label": "ProbeRegistry - the ordered probe list",
+      "pos": [
+        1170,
+        148
+      ],
+      "src": "docs/architecture.md §4.1 · core/ProbeRegistry.kt",
+      "description": "runAll with progress. One of the two places that legitimately knows about many modules."
+    },
+    {
+      "id": "c_labpermissions",
+      "type": "ApplicationComponent",
+      "label": "LabPermissions",
+      "pos": [
+        790,
+        24
+      ],
+      "src": "docs/architecture.md §4.1",
+      "description": "Optional-permission model with a tester-facing reason per permission. Used by net, audio, projection, input."
+    },
+    {
+      "id": "c_dashboardkeys",
+      "type": "ApplicationComponent",
+      "label": "DashboardKeys",
+      "pos": [
+        980,
+        24
+      ],
+      "src": "docs/architecture.md §4.1",
+      "description": "The probe-to-dashboard contract, plus gap detection."
+    },
+    {
+      "id": "c_json",
+      "type": "ApplicationComponent",
+      "label": "Json - dependency-free serialisation",
+      "pos": [
+        600,
+        24
+      ],
+      "src": "docs/architecture.md §4.1 · docs/DEPENDENCIES.md",
+      "description": "core/Json.kt is 50 lines and dependency-free; no JSON library is pulled in."
+    },
+    {
+      "id": "do_observation",
+      "type": "DataObject",
+      "label": "Observation(key, value, status, note, category)",
+      "pos": [
+        1360,
+        24
+      ],
+      "src": "docs/architecture.md §3",
+      "description": "Every fact the app produces is an Observation carrying its own epistemic status."
+    },
+    {
+      "id": "do_logrecord",
+      "type": "DataObject",
+      "label": "LogRecord(timestamp, elapsedRealtimeMs, testRunId, category, event, status, details)",
+      "pos": [
+        1360,
+        148
+      ],
+      "src": "README.md 'Structured evidence' · docs/architecture.md §4.1",
+      "description": ""
+    },
+    {
+      "id": "mod_scan",
+      "type": "ApplicationComponent",
+      "label": "scan - device and codec inventory (4 files)",
+      "pos": [
+        30,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_display",
+      "type": "ApplicationComponent",
+      "label": "display - topology, MediaRouter, live listener (4)",
+      "pos": [
+        220,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_net",
+      "type": "ApplicationComponent",
+      "label": "net - Wi-Fi Direct, connectivity, interfaces (4)",
+      "pos": [
+        410,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_audio",
+      "type": "ApplicationComponent",
+      "label": "audio - routes, synthesised tones, A/V pulse (3)",
+      "pos": [
+        600,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_input",
+      "type": "ApplicationComponent",
+      "label": "input - event monitor, touch-back grid (4)",
+      "pos": [
+        790,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_projection",
+      "type": "ApplicationComponent",
+      "label": "projection - capture, VirtualDisplay, H.264, FGS (4)",
+      "pos": [
+        980,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_scene",
+      "type": "ApplicationComponent",
+      "label": "scene - diagnostic pattern, controls, presentation host (5)",
+      "pos": [
+        1170,
+        272
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_samsung",
+      "type": "ApplicationComponent",
+      "label": "samsung - Smart View and DeX surfaces, Miracast wizard (5)",
+      "pos": [
+        410,
+        396
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_auto",
+      "type": "ApplicationComponent",
+      "label": "auto - Android Auto matrix, motion-state observation (4)",
+      "pos": [
+        600,
+        396
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_report",
+      "type": "ApplicationComponent",
+      "label": "report - 20-section generator, exports, live log viewer (3)",
+      "pos": [
+        790,
+        396
+      ],
+      "src": "docs/architecture.md §2 · ARCHITECTURE.md Units",
+      "description": "Arrows point into core only. No module imports another module's implementation."
+    },
+    {
+      "id": "mod_ui",
+      "type": "ApplicationComponent",
+      "label": "ui - theme, shared components, dashboard (4)",
+      "pos": [
+        220,
+        148
+      ],
+      "src": "ARCHITECTURE.md Units",
+      "description": ""
+    },
+    {
+      "id": "c_labnavhost",
+      "type": "ApplicationComponent",
+      "label": "LabNavHost - the 14 destinations",
+      "pos": [
+        30,
+        148
+      ],
+      "src": "ui/LabNavHost.kt · docs/architecture.md §2",
+      "description": "dashboard, device_scan, miracast, display, network, audio, input, projection, android_auto, motion, dex, scene, report, log. A flat list of string routes: one tap from the dashboard to any experiment and one tap back."
+    },
+    {
+      "id": "dev_zfold",
+      "type": "Device",
+      "label": "Samsung Galaxy Z Fold  <<TBD: exact model>>",
+      "pos": [
+        410,
+        150
+      ],
+      "src": "README.md · docs/protocol-findings.md 2.1",
+      "description": "The repository names 'Samsung Galaxy Z Fold' without a model number; row 2.1 of docs/protocol-findings.md has model / One UI version / build fingerprint as NOT TESTED."
+    },
+    {
+      "id": "dev_mirai",
+      "type": "Device",
+      "label": "Toyota Mirai 2025 head unit  <<TBD: software version>>",
+      "pos": [
+        1170,
+        150
+      ],
+      "src": "README.md · test procedure §0 (vehicle form)",
+      "description": "Head-unit software version is a field the tester fills in the EXPORT REPORT vehicle form; no value is recorded anywhere in the repository."
+    },
+    {
+      "id": "ss_android",
+      "type": "SystemSoftware",
+      "label": "Android - minSdk 29, compileSdk 35, targetSdk 35",
+      "pos": [
+        600,
+        150
+      ],
+      "src": "docs/DEPENDENCIES.md Build · BUILD.md",
+      "description": "minSdk 29 is the floor for AudioPlaybackCaptureConfiguration and the mediaProjection FGS type."
+    },
+    {
+      "id": "n_app",
+      "type": "Node",
+      "label": "MiraiCast Lab process - largeHeap, allowBackup=false",
+      "pos": [
+        600,
+        276
+      ],
+      "src": "app/src/main/AndroidManifest.xml <application>",
+      "description": ""
+    },
+    {
+      "id": "n_mainactivity",
+      "type": "Node",
+      "label": "MainActivity - LAUNCHER, singleTask, single-activity host",
+      "pos": [
+        30,
+        402
+      ],
+      "src": "AndroidManifest.xml · ARCHITECTURE.md Runtime",
+      "description": "Single-activity host for all fourteen destinations."
+    },
+    {
+      "id": "n_presentation",
+      "type": "Node",
+      "label": "scene.PresentationHostActivity - setLaunchDisplayId",
+      "pos": [
+        220,
+        402
+      ],
+      "src": "AndroidManifest.xml · docs/architecture.md §4.4",
+      "description": "Exists only to place the scene on a secondary display via ActivityOptions.setLaunchDisplayId - how an ordinary app reaches a Miracast/DeX screen with no privileged API. Itself one of the project's findings."
+    },
+    {
+      "id": "n_projservice",
+      "type": "Node",
+      "label": "projection.ProjectionService - FGS type mediaProjection",
+      "pos": [
+        410,
+        402
+      ],
+      "src": "AndroidManifest.xml · docs/architecture.md §4.5",
+      "description": "Holds no capture logic. It exists because Android 14+ refuses createVirtualDisplay unless such a service is already running."
+    },
+    {
+      "id": "n_fileprovider",
+      "type": "Node",
+      "label": "FileProvider ${applicationId}.fileprovider",
+      "pos": [
+        600,
+        402
+      ],
+      "src": "AndroidManifest.xml · res/xml/file_paths.xml",
+      "description": "Shares exported reports."
+    },
+    {
+      "id": "n_filesdir",
+      "type": "Node",
+      "label": "App-private storage - filesDir/evidence, filesDir/reports",
+      "pos": [
+        980,
+        402
+      ],
+      "src": "ARCHITECTURE.md Storage · SAFETY.md",
+      "description": "Never external storage: nothing here leaves the device."
+    },
+    {
+      "id": "art_jsonl",
+      "type": "Artifact",
+      "label": "run-<ts>-<id>.jsonl - append-only, flushed per record",
+      "pos": [
+        790,
+        528
+      ],
+      "src": "core/SessionLogger.kt · docs/architecture.md §4.1",
+      "description": "Each record is flushed as its own line, so a kill loses at most the current record."
+    },
+    {
+      "id": "art_md",
+      "type": "Artifact",
+      "label": "miraicastlab-report-<id>.md - 20 sections",
+      "pos": [
+        980,
+        528
+      ],
+      "src": "report/ReportGenerator.kt",
+      "description": "Sections 15-18 derived mechanically from LabStatus."
+    },
+    {
+      "id": "art_json",
+      "type": "Artifact",
+      "label": "report .json export",
+      "pos": [
+        1170,
+        528
+      ],
+      "src": "report/ReportScreen.kt (EXPORT JSON)",
+      "description": ""
+    },
+    {
+      "id": "art_csv",
+      "type": "Artifact",
+      "label": "report .csv export",
+      "pos": [
+        1360,
+        528
+      ],
+      "src": "report/ReportScreen.kt (EXPORT CSV)",
+      "description": ""
+    },
+    {
+      "id": "n_hc55",
+      "type": "Node",
+      "label": "HorseCloud55 - build host (Ubuntu 24.04, SDK 35, JDK 21)",
+      "pos": [
+        30,
+        24
+      ],
+      "src": "BUILD.md 'Toolchain' · CLAUDE.md",
+      "description": "Measured 2026-08-30: HC55 builds this project end to end."
+    },
+    {
+      "id": "n_gradle",
+      "type": "Node",
+      "label": "Gradle 8.11.1 wrapper - AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01",
+      "pos": [
+        220,
+        24
+      ],
+      "src": "BUILD.md · docs/DEPENDENCIES.md Build",
+      "description": ""
+    },
+    {
+      "id": "art_apk_debug",
+      "type": "Artifact",
+      "label": "app-debug.apk - applicationIdSuffix .debug",
+      "pos": [
+        410,
+        24
+      ],
+      "src": "BUILD.md",
+      "description": "Debug and release can be installed side by side during a vehicle session."
+    },
+    {
+      "id": "n_emulator",
+      "type": "Node",
+      "label": "Emulator smoke gate - emulator-5584 (mandatory)",
+      "pos": [
+        600,
+        24
+      ],
+      "src": "BUILD.md 'Emulator smoke gate' · CLAUDE.md release protocol",
+      "description": "Green = FATAL count 0 and a live pid. Green unit tests do not substitute."
+    },
+    {
+      "id": "art_apk_dist",
+      "type": "Artifact",
+      "label": "dist/MiraiCastLab-v0.1.0-Mirai-debug.apk",
+      "pos": [
+        790,
+        24
+      ],
+      "src": "ARCHITECTURE.md Deploy · dist/ · version.json",
+      "description": ""
+    },
+    {
+      "id": "n_horseapk",
+      "type": "Node",
+      "label": "HorseAPK - /APKDeploy to horsecloud55.ddns.net:4443/MiraiCastLab/",
+      "pos": [
+        980,
+        24
+      ],
+      "src": "ARCHITECTURE.md Deploy",
+      "description": ""
+    },
+    {
+      "id": "art_tools_adb",
+      "type": "Artifact",
+      "label": "tools/adb - collect-dumpsys.sh, watch-session.sh, pull-evidence.sh",
+      "pos": [
+        1360,
+        24
+      ],
+      "src": "tools/adb/README.md",
+      "description": "Read-only diagnostics for the developer workstation. None require root, none change device or vehicle state."
+    },
+    {
+      "id": "art_tools_report",
+      "type": "Artifact",
+      "label": "tools/report/render_report.py",
+      "pos": [
+        1360,
+        276
+      ],
+      "src": "tools/report/README.md",
+      "description": "Re-renders an old run, and renders a session that never reached the export screen. A torn final line - the signature of a killed process - is reported on stderr and skipped, never dropped silently."
+    },
+    {
+      "id": "cn_wifi",
+      "type": "CommunicationNetwork",
+      "label": "Wi-Fi Direct / p2p0 - 5 GHz radio contention",
+      "pos": [
+        980,
+        150
+      ],
+      "src": "docs/DEPENDENCIES.md platform surfaces · test procedure §6",
+      "description": ""
+    },
+    {
+      "id": "cn_usb",
+      "type": "CommunicationNetwork",
+      "label": "USB-C - wired Android Auto",
+      "pos": [
+        980,
+        276
+      ],
+      "src": "test procedure §6 row C/D",
+      "description": ""
+    },
+    {
+      "id": "cn_adb",
+      "type": "CommunicationNetwork",
+      "label": "ADB - workstation link, optional during a session",
+      "pos": [
+        1360,
+        150
+      ],
+      "src": "tools/adb/README.md · test procedure §0",
+      "description": "The tester should not need to remember ADB commands while sitting in the vehicle."
+    },
+    {
+      "id": "ui_dashboard",
+      "type": "ApplicationComponent",
+      "label": "DashboardScreen - RUN DEVICE SCAN",
+      "pos": [
+        30,
+        24
+      ],
+      "src": "README.md screens table · test procedure §1",
+      "description": "The whole device state on one page, with a status chip per fact."
+    },
+    {
+      "id": "c_safeobserve",
+      "type": "ApplicationFunction",
+      "label": "Probe.safeObserve(context)",
+      "pos": [
+        414,
+        24
+      ],
+      "src": "core/Probe.kt · docs/PRINCIPLES.md P4",
+      "description": "Runs Probe.observe and converts any throwable into an ERROR observation."
+    },
+    {
+      "id": "do_obs_error",
+      "type": "DataObject",
+      "label": "Observation.error - note: the capability itself is untested",
+      "pos": [
+        606,
+        24
+      ],
+      "src": "docs/architecture.md §3 rule 2 · core/Probe.kt",
+      "description": "A probe that blows up must degrade the report, not the app. A probe may never turn its own failure into a negative result about the device."
+    },
+    {
+      "id": "p_device",
+      "type": "ApplicationComponent",
+      "label": "1. DeviceProbe",
+      "pos": [
+        30,
+        136
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · scan/DeviceProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_codec",
+      "type": "ApplicationComponent",
+      "label": "2. CodecProbe",
+      "pos": [
+        222,
+        136
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · scan/CodecProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_display",
+      "type": "ApplicationComponent",
+      "label": "3. DisplayProbe",
+      "pos": [
+        414,
+        136
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · display/DisplayProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_mediaroute",
+      "type": "ApplicationComponent",
+      "label": "4. MediaRouteProbe",
+      "pos": [
+        606,
+        136
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · display/MediaRouteProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_wifip2p",
+      "type": "ApplicationComponent",
+      "label": "5. WifiP2pProbe",
+      "pos": [
+        30,
+        248
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · net/WifiP2pProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_connectivity",
+      "type": "ApplicationComponent",
+      "label": "6. ConnectivityProbe",
+      "pos": [
+        222,
+        248
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · net/ConnectivityProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_audioroute",
+      "type": "ApplicationComponent",
+      "label": "7. AudioRouteProbe",
+      "pos": [
+        414,
+        248
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · audio/AudioRouteProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_inputdevice",
+      "type": "ApplicationComponent",
+      "label": "8. InputDeviceProbe",
+      "pos": [
+        606,
+        248
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · input/InputDeviceProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_projcap",
+      "type": "ApplicationComponent",
+      "label": "9. ProjectionCapabilityProbe",
+      "pos": [
+        30,
+        360
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · projection/ProjectionCapabilityProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_smartview",
+      "type": "ApplicationComponent",
+      "label": "10. SmartViewProbe",
+      "pos": [
+        222,
+        360
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · samsung/SmartViewProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_dex",
+      "type": "ApplicationComponent",
+      "label": "11. DexProbe",
+      "pos": [
+        414,
+        360
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · samsung/DexProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "p_androidauto",
+      "type": "ApplicationComponent",
+      "label": "12. AndroidAutoProbe",
+      "pos": [
+        606,
+        360
+      ],
+      "src": "core/ProbeRegistry.kt (scan order) · auto/AndroidAutoProbe.kt",
+      "description": "Read-only, idempotent and non-throwing. It never mutates device state and never asks for permission."
+    },
+    {
+      "id": "ds_stateflow",
+      "type": "DataObject",
+      "label": "SessionLogger.records: StateFlow - last 5000 in memory",
+      "pos": [
+        798,
+        472
+      ],
+      "src": "core/SessionLogger.kt (MAX_IN_MEMORY) · docs/architecture.md §8",
+      "description": "The JSONL file is uncapped; the viewer says how many records it is showing."
+    },
+    {
+      "id": "ui_logviewer",
+      "type": "ApplicationComponent",
+      "label": "LogViewerScreen - live structured log",
+      "pos": [
+        990,
+        472
+      ],
+      "src": "README.md screens table · report/LogViewerScreen.kt",
+      "description": "Category/status filters and search."
+    },
+    {
+      "id": "ui_projection",
+      "type": "ApplicationComponent",
+      "label": "MediaProjectionScreen",
+      "pos": [
+        990,
+        24
+      ],
+      "src": "README.md screens table · projection/MediaProjectionScreen.kt",
+      "description": "Capture FPS, VirtualDisplay metrics, a real H.264 encode with encoder statistics."
+    },
+    {
+      "id": "api_mpm",
+      "type": "SystemSoftware",
+      "label": "MediaProjectionManager - consent intent",
+      "pos": [
+        1182,
+        24
+      ],
+      "src": "projection/CaptureEngine.kt · docs/DEPENDENCIES.md platform surfaces",
+      "description": ""
+    },
+    {
+      "id": "api_mp",
+      "type": "SystemSoftware",
+      "label": "MediaProjection - registerCallback",
+      "pos": [
+        1566,
+        24
+      ],
+      "src": "projection/CaptureEngine.kt",
+      "description": ""
+    },
+    {
+      "id": "api_vd",
+      "type": "SystemSoftware",
+      "label": "VirtualDisplay - createVirtualDisplay",
+      "pos": [
+        1566,
+        136
+      ],
+      "src": "projection/CaptureEngine.kt · docs/architecture.md §4.5",
+      "description": ""
+    },
+    {
+      "id": "api_imagereader",
+      "type": "SystemSoftware",
+      "label": "ImageReader on a HandlerThread",
+      "pos": [
+        1566,
+        248
+      ],
+      "src": "projection/CaptureEngine.kt",
+      "description": "All capture work happens on one HandlerThread. The main thread only reads state."
+    },
+    {
+      "id": "api_mediacodec",
+      "type": "SystemSoftware",
+      "label": "MediaCodec - H.264 encoder",
+      "pos": [
+        1566,
+        360
+      ],
+      "src": "projection/H264Encoder.kt · docs/protocol-findings.md 1.15",
+      "description": ""
+    },
+    {
+      "id": "rq_a14order",
+      "type": "Constraint",
+      "label": "Android 14+ order: consent, FGS, getMediaProjection, registerCallback, createVirtualDisplay",
+      "pos": [
+        1374,
+        136
+      ],
+      "src": "projection/CaptureEngine.kt (KDoc) · docs/DEPENDENCIES.md platform surfaces",
+      "description": "Lifecycle order matters and is not negotiable on Android 14+. Getting that order wrong throws SecurityException, and a MediaProjection that is not released is a crash on the next start."
+    },
+    {
+      "id": "do_nottested_sink",
+      "type": "DataObject",
+      "label": "NOT_TESTED observation: local capture says nothing about what the sink receives",
+      "pos": [
+        1374,
+        360
+      ],
+      "src": "projection/CaptureEngine.kt (KDoc) · docs/PRINCIPLES.md P3",
+      "description": "Emitted as an explicit NOT_TESTED observation at the end of every session so the claim cannot drift in the report."
+    },
+    {
+      "id": "ui_report",
+      "type": "ApplicationComponent",
+      "label": "ReportScreen - EXPORT REPORT / JSON / CSV / SHARE",
+      "pos": [
+        990,
+        584
+      ],
+      "src": "report/ReportScreen.kt · test procedure §8",
+      "description": ""
+    },
+    {
+      "id": "c_reportgen",
+      "type": "ApplicationComponent",
+      "label": "ReportGenerator - 20 sections, mechanical grading",
+      "pos": [
+        1182,
+        584
+      ],
+      "src": "report/ReportGenerator.kt · docs/architecture.md §5",
+      "description": "All twenty sections are always emitted. An absent section would read as a silent negative."
+    },
+    {
+      "id": "n_chooser",
+      "type": "Node",
+      "label": "ACTION_SEND chooser - FLAG_GRANT_READ_URI_PERMISSION",
+      "pos": [
+        1566,
+        808
+      ],
+      "src": "report/ReportScreen.kt (shareFile)",
+      "description": ""
+    },
+    {
+      "id": "ba_tester",
+      "type": "BusinessActor",
+      "label": "Tester - stationary vehicle, in park, ignition on",
+      "pos": [
+        30,
+        24
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §0",
+      "description": "Nothing in this procedure is to be executed while driving. See SAFETY.md."
+    },
+    {
+      "id": "bp_prep",
+      "type": "BusinessProcess",
+      "label": "§0 Before you leave - install, baseline at home, charge",
+      "pos": [
+        222,
+        24
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §0",
+      "description": "Install a debug build and confirm it starts; open the app at home and press RUN DEVICE SCAN for a baseline with no car present; export it as baseline-no-vehicle; optionally take a laptop; charge the phone."
+    },
+    {
+      "id": "bo_baseline",
+      "type": "BusinessObject",
+      "label": "baseline-no-vehicle report (Markdown)",
+      "pos": [
+        414,
+        24
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §0 step 3",
+      "description": "The single most useful reference you will have."
+    },
+    {
+      "id": "bp_rowa",
+      "type": "BusinessProcess",
+      "label": "§1 Row A - baseline in the vehicle, nothing connected",
+      "pos": [
+        606,
+        24
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §1",
+      "description": "Note the number of displays, whether any p2p* interface exists, the active audio output, and whether Android already reports car mode. Every later observation is a diff against it."
+    },
+    {
+      "id": "w1",
+      "type": "BusinessProcess",
+      "label": "W1 Scan baseline",
+      "pos": [
+        30,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "Tap Scan baseline. The app records a display / route / Wi-Fi / P2P / audio snapshot."
+    },
+    {
+      "id": "w2",
+      "type": "BusinessProcess",
+      "label": "W2 Start Smart View from the quick panel and pick the Mirai",
+      "pos": [
+        222,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "The app cannot connect for you; it opens the right settings panel if the intent resolves."
+    },
+    {
+      "id": "w3",
+      "type": "BusinessProcess",
+      "label": "W3 Wait, watching the live change list",
+      "pos": [
+        606,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "Every display, route, interface and audio-route change, timestamped."
+    },
+    {
+      "id": "w4",
+      "type": "BusinessProcess",
+      "label": "W4 Launch scene on external display",
+      "pos": [
+        990,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "The diagnostic pattern appears on the car screen."
+    },
+    {
+      "id": "w5",
+      "type": "BusinessProcess",
+      "label": "W5 For each sub-test, tap what you actually see",
+      "pos": [
+        1182,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "VISIBLE / DISTORTED / BLACK / AUDIO ONLY / NOT SHOWN."
+    },
+    {
+      "id": "w6",
+      "type": "BusinessProcess",
+      "label": "W6 Touch the numbered targets on the car screen",
+      "pos": [
+        1374,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "Any input event that arrives on the phone is recorded."
+    },
+    {
+      "id": "w7",
+      "type": "BusinessProcess",
+      "label": "W7 Export",
+      "pos": [
+        30,
+        264
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 wizard table",
+      "description": "A wizard summary with a status per line."
+    },
+    {
+      "id": "ev_intent",
+      "type": "BusinessEvent",
+      "label": "Does the settings intent resolve?",
+      "pos": [
+        414,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 step 2 · AndroidManifest.xml <queries>",
+      "description": "A resolvable intent is CONFIRMED; an unresolvable one is UNSUPPORTED for this device - both are real answers."
+    },
+    {
+      "id": "ev_display",
+      "type": "BusinessEvent",
+      "label": "Did a display appear, and at what size did Android draw to it?",
+      "pos": [
+        798,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 'honest limits'",
+      "description": "What you can establish: whether a display appeared, at what size Android drew to it, whether audio moved, whether motion survived the link, and whether anything came back the other way."
+    },
+    {
+      "id": "bo_structural",
+      "type": "BusinessObject",
+      "label": "Permanently NOT_TESTED: negotiated resolution, framerate, codec, HDCP, UIBC advertisement",
+      "pos": [
+        606,
+        264
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 · docs/protocol-findings.md 1.6-1.10",
+      "description": "Those live in the Wi-Fi Display / wpa_supplicant layer, which is not exposed to third-party apps on a non-rooted device. That is a finding of this project, not a gap in it."
+    },
+    {
+      "id": "bo_photo",
+      "type": "BusinessObject",
+      "label": "Photograph of the car screen: 60-position sweep + frame counter",
+      "pos": [
+        990,
+        264
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2 'What to look at' · 'What a complete session should have produced'",
+      "description": "The number of distinct sweep positions in one photo gives the delivered frame rate; both frame counters in one frame give the end-to-end latency in frames."
+    },
+    {
+      "id": "bp_input",
+      "type": "BusinessProcess",
+      "label": "§3 Input test - 3x5 target grid on the car's screen",
+      "pos": [
+        222,
+        384
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3",
+      "description": "Touch each numbered target on the car's screen, then read the verdict."
+    },
+    {
+      "id": "ev_mouse",
+      "type": "BusinessEvent",
+      "label": "Mouse events logged? If not the monitor is broken",
+      "pos": [
+        414,
+        384
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3 step 1",
+      "description": "Sanity-check the instrument first: pair a Bluetooth mouse or plug in a USB-C mouse. If the monitor does not log its movement, any negative result below is meaningless."
+    },
+    {
+      "id": "ev_input",
+      "type": "BusinessEvent",
+      "label": "Did any input event arrive?",
+      "pos": [
+        1566,
+        144
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3 · docs/protocol-findings.md 1.10",
+      "description": "NO INPUT OBSERVED is recorded as such - not as 'unsupported'. If input does arrive, the app records source, device id, coordinates, pressure and the derived coordinate transform."
+    },
+    {
+      "id": "bo_verdict",
+      "type": "BusinessObject",
+      "label": "Touch-back verdict with its percentage and source list",
+      "pos": [
+        606,
+        384
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md 'What a complete session should have produced'",
+      "description": ""
+    },
+    {
+      "id": "bp_audio",
+      "type": "BusinessProcess",
+      "label": "§4 Audio - silence, mono, stereo L/R, continuous, latency click, A/V sync pulse",
+      "pos": [
+        990,
+        384
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §4",
+      "description": "The app logs its own internal timestamps; the end-to-end number can only come from an external recording, and the app says so rather than pretending otherwise."
+    },
+    {
+      "id": "bo_avrec",
+      "type": "BusinessObject",
+      "label": "One external A/V recording for the latency estimate",
+      "pos": [
+        1182,
+        384
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §4 · 'What a complete session should have produced'",
+      "description": ""
+    },
+    {
+      "id": "bp_dex",
+      "type": "BusinessProcess",
+      "label": "§5 Samsung DeX - density and flags vs plain Smart View",
+      "pos": [
+        222,
+        504
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §5",
+      "description": "A different density is the usual discriminator between DeX and mirroring."
+    },
+    {
+      "id": "ev_dex",
+      "type": "BusinessEvent",
+      "label": "Is the Mirai offered as a Wireless DeX target?",
+      "pos": [
+        414,
+        504
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §5",
+      "description": "Record the exact limitation if DeX refuses the Mirai - the wording of the refusal is data."
+    },
+    {
+      "id": "bp_auto",
+      "type": "BusinessProcess",
+      "label": "§6 Android Auto coexistence - rows C-F",
+      "pos": [
+        798,
+        504
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §6",
+      "description": "C: USB on / Miracast off. D: USB on / on. E: wireless on / off. F: wireless on / on. Watch the Wi-Fi frequency readout: wireless AA and Miracast both want the 5 GHz radio."
+    },
+    {
+      "id": "ev_order",
+      "type": "BusinessEvent",
+      "label": "Both connection orders for D and F",
+      "pos": [
+        990,
+        504
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §6",
+      "description": "AA first then Miracast, and the reverse. They can behave differently, and which one survives is the finding."
+    },
+    {
+      "id": "bo_matrix",
+      "type": "BusinessObject",
+      "label": "One report per matrix row, or an explicit NOT_TESTED",
+      "pos": [
+        1374,
+        264
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md 'What a complete session should have produced'",
+      "description": ""
+    },
+    {
+      "id": "bp_motion",
+      "type": "BusinessProcess",
+      "label": "§7 Motion state - observation only, the car stays stationary",
+      "pos": [
+        222,
+        624
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §7 · SAFETY.md",
+      "description": "Markers: PARK, VIDEO VISIBLE, VIDEO BLOCKED, AUDIO ONLY, CONNECTION LOST. MotionStateScreen contains exactly two things: a passive liveness recorder and large marker buttons. It sends nothing anywhere."
+    },
+    {
+      "id": "ev_bench",
+      "type": "BusinessEvent",
+      "label": "Bench head unit or legitimate stationary test environment available?",
+      "pos": [
+        414,
+        624
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §7 · SAFETY.md",
+      "description": "Only then record what the receiver does when its vehicle-state input changes. Nothing in this project changes that input."
+    },
+    {
+      "id": "ev_blocked",
+      "type": "BusinessEvent",
+      "label": "Head unit blanks video?",
+      "pos": [
+        606,
+        624
+      ],
+      "src": "SAFETY.md 'The motion-state experiment'",
+      "description": "If the Toyota head unit disables video based on vehicle state, that is recorded as a finding and the project stops there. No bypass is built."
+    },
+    {
+      "id": "bp_close",
+      "type": "BusinessProcess",
+      "label": "§8 Close the session - export MD/JSON/CSV, disconnect",
+      "pos": [
+        990,
+        624
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md §8",
+      "description": "With a laptop: collect-dumpsys.sh after and pull-evidence.sh. Without: the in-app share sheet. Then disconnect Smart View and Android Auto."
+    },
+    {
+      "id": "bo_jsonl_run",
+      "type": "BusinessObject",
+      "label": "The JSONL evidence file for the whole run",
+      "pos": [
+        1182,
+        624
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md 'What a complete session should have produced'",
+      "description": ""
+    },
+    {
+      "id": "bo_notfilled",
+      "type": "BusinessObject",
+      "label": "Anything you did not do stays NOT_TESTED",
+      "pos": [
+        1374,
+        624
+      ],
+      "src": "docs/toyota-mirai-2025-test-procedure.md closing line",
+      "description": "Do not fill it in from memory afterwards."
+    }
+  ],
+  "relations": [
+    {
+      "id": "r001",
+      "from": "dr_unknown",
+      "to": "go_empirical",
+      "label": "raises",
+      "src": "README.md"
+    },
+    {
+      "id": "r002",
+      "from": "dr_unknown",
+      "to": "go_experiments",
+      "label": "raises",
+      "src": "docs/architecture.md §1"
+    },
+    {
+      "id": "r003",
+      "from": "dr_false",
+      "to": "go_evidence",
+      "label": "motivates",
+      "src": "docs/architecture.md §7"
+    },
+    {
+      "id": "r004",
+      "from": "as_state",
+      "to": "go_empirical",
+      "label": "still open at v0.1.0",
+      "src": "README.md + version.json"
+    },
+    {
+      "id": "r005",
+      "from": "rq_grade",
+      "to": "p1",
+      "label": "realises",
+      "src": "docs/PRINCIPLES.md P1"
+    },
+    {
+      "id": "r006",
+      "from": "rq_mechanical",
+      "to": "p2",
+      "label": "realises",
+      "src": "docs/architecture.md §3"
+    },
+    {
+      "id": "r007",
+      "from": "rq_safeobserve",
+      "to": "p4",
+      "label": "realises",
+      "src": "docs/architecture.md §3"
+    },
+    {
+      "id": "r008",
+      "from": "rq_missing",
+      "to": "p5",
+      "label": "realises",
+      "src": "docs/architecture.md §3"
+    },
+    {
+      "id": "r009",
+      "from": "rq_sink",
+      "to": "p3",
+      "label": "realises",
+      "src": "docs/architecture.md §3"
+    },
+    {
+      "id": "r010",
+      "from": "cs_rule",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r011",
+      "from": "cs_can",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r012",
+      "from": "cs_spoof",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r013",
+      "from": "cs_firmware",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r014",
+      "from": "cs_aaspoof",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r015",
+      "from": "cs_aacat",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r016",
+      "from": "cs_bus",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r017",
+      "from": "cs_evasion",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r018",
+      "from": "cs_internet",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r019",
+      "from": "cs_private",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r020",
+      "from": "cs_bench",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r021",
+      "from": "cs_root",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r022",
+      "from": "cs_escal",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r023",
+      "from": "cs_novehicle",
+      "to": "p7",
+      "label": "bounds",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "r024",
+      "from": "cs_nomiracast",
+      "to": "p6",
+      "label": "bounds",
+      "src": "docs/architecture.md §7"
+    },
+    {
+      "id": "r025",
+      "from": "cs_nohidden",
+      "to": "p5",
+      "label": "bounds",
+      "src": "docs/architecture.md §7"
+    },
+    {
+      "id": "r026",
+      "from": "cap_inventory",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r027",
+      "from": "cap_wizard",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r028",
+      "from": "cap_scene",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r029",
+      "from": "cap_audio",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r030",
+      "from": "cap_touchback",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r031",
+      "from": "cap_projection",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r032",
+      "from": "cap_matrix",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r033",
+      "from": "cap_motion",
+      "to": "go_experiments",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r034",
+      "from": "cap_report",
+      "to": "go_evidence",
+      "label": "realises",
+      "src": "README.md"
+    },
+    {
+      "id": "r035",
+      "from": "p1",
+      "to": "go_evidence",
+      "label": "grades every fact",
+      "src": "docs/PRINCIPLES.md P1"
+    },
+    {
+      "id": "r036",
+      "from": "p2",
+      "to": "go_evidence",
+      "label": "keeps the grading honest",
+      "src": "docs/PRINCIPLES.md P2"
+    },
+    {
+      "id": "r037",
+      "from": "p8",
+      "to": "go_evidence",
+      "label": "writes as it happens",
+      "src": "docs/PRINCIPLES.md P8"
+    },
+    {
+      "id": "r038",
+      "from": "mod_core",
+      "to": "c_evidence",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r039",
+      "from": "mod_core",
+      "to": "c_probe",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r040",
+      "from": "mod_core",
+      "to": "c_sessionlogger",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r041",
+      "from": "mod_core",
+      "to": "c_json",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r042",
+      "from": "mod_core",
+      "to": "c_labpermissions",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r043",
+      "from": "mod_core",
+      "to": "c_dashboardkeys",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r044",
+      "from": "mod_core",
+      "to": "c_proberegistry",
+      "label": "contains",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r045",
+      "from": "mod_ui",
+      "to": "c_labnavhost",
+      "label": "contains",
+      "src": "ui/LabNavHost.kt"
+    },
+    {
+      "id": "r046",
+      "from": "mod_scan",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r047",
+      "from": "mod_display",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r048",
+      "from": "mod_net",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r049",
+      "from": "mod_audio",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r050",
+      "from": "mod_input",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r051",
+      "from": "mod_projection",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r052",
+      "from": "mod_scene",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r053",
+      "from": "mod_samsung",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r054",
+      "from": "mod_auto",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r055",
+      "from": "mod_report",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2 ('arrows point into core only')"
+    },
+    {
+      "id": "r056",
+      "from": "mod_ui",
+      "to": "mod_core",
+      "label": "depends on",
+      "src": "docs/architecture.md §2"
+    },
+    {
+      "id": "r057",
+      "from": "c_proberegistry",
+      "to": "mod_scan",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r058",
+      "from": "c_proberegistry",
+      "to": "mod_display",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r059",
+      "from": "c_proberegistry",
+      "to": "mod_net",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r060",
+      "from": "c_proberegistry",
+      "to": "mod_audio",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r061",
+      "from": "c_proberegistry",
+      "to": "mod_input",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r062",
+      "from": "c_proberegistry",
+      "to": "mod_projection",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r063",
+      "from": "c_proberegistry",
+      "to": "mod_samsung",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r064",
+      "from": "c_proberegistry",
+      "to": "mod_auto",
+      "label": "lists probes of",
+      "src": "core/ProbeRegistry.kt (imports)"
+    },
+    {
+      "id": "r065",
+      "from": "c_labnavhost",
+      "to": "mod_scan",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r066",
+      "from": "c_labnavhost",
+      "to": "mod_display",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r067",
+      "from": "c_labnavhost",
+      "to": "mod_net",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r068",
+      "from": "c_labnavhost",
+      "to": "mod_audio",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r069",
+      "from": "c_labnavhost",
+      "to": "mod_input",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r070",
+      "from": "c_labnavhost",
+      "to": "mod_projection",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r071",
+      "from": "c_labnavhost",
+      "to": "mod_scene",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r072",
+      "from": "c_labnavhost",
+      "to": "mod_samsung",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r073",
+      "from": "c_labnavhost",
+      "to": "mod_auto",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r074",
+      "from": "c_labnavhost",
+      "to": "mod_report",
+      "label": "lists screens of",
+      "src": "ui/LabNavHost.kt (imports)"
+    },
+    {
+      "id": "r075",
+      "from": "c_evidence",
+      "to": "do_observation",
+      "label": "defines",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r076",
+      "from": "c_evidence",
+      "to": "do_logrecord",
+      "label": "defines",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r077",
+      "from": "c_probe",
+      "to": "do_observation",
+      "label": "produces",
+      "src": "core/Probe.kt"
+    },
+    {
+      "id": "t30",
+      "from": "c_sessionlogger",
+      "to": "do_logrecord",
+      "label": "writes one LogRecord per observation",
+      "src": "core/SessionLogger.kt"
+    },
+    {
+      "id": "t31",
+      "from": "c_json",
+      "to": "do_logrecord",
+      "label": "serialises",
+      "src": "core/Json.kt · docs/architecture.md §4.1"
+    },
+    {
+      "id": "r080",
+      "from": "c_dashboardkeys",
+      "to": "do_observation",
+      "label": "validates keys of",
+      "src": "docs/architecture.md §4.1"
+    },
+    {
+      "id": "r081",
+      "from": "dev_zfold",
+      "to": "ss_android",
+      "label": "runs",
+      "src": "BUILD.md"
+    },
+    {
+      "id": "r082",
+      "from": "ss_android",
+      "to": "n_app",
+      "label": "hosts",
+      "src": "AndroidManifest.xml"
+    },
+    {
+      "id": "r083",
+      "from": "n_app",
+      "to": "n_mainactivity",
+      "label": "hosts",
+      "src": "AndroidManifest.xml"
+    },
+    {
+      "id": "r084",
+      "from": "n_app",
+      "to": "n_presentation",
+      "label": "hosts",
+      "src": "AndroidManifest.xml"
+    },
+    {
+      "id": "r085",
+      "from": "n_app",
+      "to": "n_projservice",
+      "label": "hosts",
+      "src": "AndroidManifest.xml"
+    },
+    {
+      "id": "r086",
+      "from": "n_app",
+      "to": "n_fileprovider",
+      "label": "hosts",
+      "src": "AndroidManifest.xml"
+    },
+    {
+      "id": "r087",
+      "from": "n_mainactivity",
+      "to": "n_presentation",
+      "label": "launches on displayId",
+      "src": "docs/architecture.md §4.4"
+    },
+    {
+      "id": "r088",
+      "from": "n_presentation",
+      "to": "dev_mirai",
+      "label": "draws the scene on the secondary display",
+      "src": "docs/architecture.md §4.4"
+    },
+    {
+      "id": "r089",
+      "from": "n_mainactivity",
+      "to": "n_projservice",
+      "label": "starts before capture",
+      "src": "docs/architecture.md §4.5"
+    },
+    {
+      "id": "r090",
+      "from": "n_app",
+      "to": "n_filesdir",
+      "label": "writes to",
+      "src": "ARCHITECTURE.md Storage"
+    },
+    {
+      "id": "r091",
+      "from": "n_filesdir",
+      "to": "art_jsonl",
+      "label": "holds",
+      "src": "core/SessionLogger.kt"
+    },
+    {
+      "id": "r092",
+      "from": "n_filesdir",
+      "to": "art_md",
+      "label": "holds",
+      "src": "report/ReportGenerator.kt (write)"
+    },
+    {
+      "id": "r093",
+      "from": "n_filesdir",
+      "to": "art_json",
+      "label": "holds",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "r094",
+      "from": "n_filesdir",
+      "to": "art_csv",
+      "label": "holds",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "r095",
+      "from": "n_fileprovider",
+      "to": "art_jsonl",
+      "label": "shares",
+      "src": "BUILD.md 'or use the in-app share sheet'"
+    },
+    {
+      "id": "r096",
+      "from": "n_hc55",
+      "to": "n_gradle",
+      "label": "runs",
+      "src": "BUILD.md"
+    },
+    {
+      "id": "r097",
+      "from": "n_gradle",
+      "to": "art_apk_debug",
+      "label": "assembleDebug produces",
+      "src": "BUILD.md"
+    },
+    {
+      "id": "r098",
+      "from": "art_apk_debug",
+      "to": "n_emulator",
+      "label": "install + am start",
+      "src": "BUILD.md smoke gate"
+    },
+    {
+      "id": "r099",
+      "from": "art_apk_debug",
+      "to": "dev_zfold",
+      "label": "adb install -r -d",
+      "src": "BUILD.md 'Install on the Galaxy Z Fold'"
+    },
+    {
+      "id": "r100",
+      "from": "art_apk_debug",
+      "to": "art_apk_dist",
+      "label": "copied to dist/",
+      "src": "ARCHITECTURE.md Deploy"
+    },
+    {
+      "id": "r101",
+      "from": "n_emulator",
+      "to": "n_horseapk",
+      "label": "gate must pass first",
+      "src": "CLAUDE.md release protocol"
+    },
+    {
+      "id": "r102",
+      "from": "art_apk_dist",
+      "to": "n_horseapk",
+      "label": "/APKDeploy",
+      "src": "ARCHITECTURE.md Deploy"
+    },
+    {
+      "id": "r103",
+      "from": "cn_wifi",
+      "to": "dev_zfold",
+      "label": "carries",
+      "src": "docs/DEPENDENCIES.md"
+    },
+    {
+      "id": "r104",
+      "from": "cn_wifi",
+      "to": "dev_mirai",
+      "label": "carries",
+      "src": "test procedure §2"
+    },
+    {
+      "id": "r105",
+      "from": "cn_usb",
+      "to": "dev_zfold",
+      "label": "carries",
+      "src": "test procedure §6 row C"
+    },
+    {
+      "id": "r106",
+      "from": "cn_usb",
+      "to": "dev_mirai",
+      "label": "carries",
+      "src": "test procedure §6 row C"
+    },
+    {
+      "id": "r107",
+      "from": "cn_adb",
+      "to": "dev_zfold",
+      "label": "connects",
+      "src": "tools/adb/README.md"
+    },
+    {
+      "id": "r108",
+      "from": "art_tools_adb",
+      "to": "cn_adb",
+      "label": "dumpsys / logcat over",
+      "src": "tools/adb/README.md"
+    },
+    {
+      "id": "r109",
+      "from": "art_tools_adb",
+      "to": "art_jsonl",
+      "label": "pull-evidence.sh pulls",
+      "src": "tools/adb/README.md"
+    },
+    {
+      "id": "r110",
+      "from": "art_tools_report",
+      "to": "art_jsonl",
+      "label": "renders",
+      "src": "tools/report/README.md"
+    },
+    {
+      "id": "r111",
+      "from": "art_tools_report",
+      "to": "art_md",
+      "label": "produces the same 20 sections",
+      "src": "tools/report/README.md"
+    },
+    {
+      "id": "t01",
+      "from": "ui_dashboard",
+      "to": "c_proberegistry",
+      "label": "RUN DEVICE SCAN",
+      "src": "core/ProbeRegistry.kt runAll"
+    },
+    {
+      "id": "t02",
+      "from": "c_proberegistry",
+      "to": "c_safeobserve",
+      "label": "runAll, in scan order",
+      "src": "core/ProbeRegistry.kt"
+    },
+    {
+      "id": "t03",
+      "from": "c_safeobserve",
+      "to": "p_device",
+      "label": "runs each probe in scan order",
+      "src": "core/ProbeRegistry.kt all[] order (probe 1 of 12)"
+    },
+    {
+      "id": "t04",
+      "from": "c_safeobserve",
+      "to": "p_codec",
+      "src": "core/ProbeRegistry.kt all[] order (probe 2 of 12)"
+    },
+    {
+      "id": "t05",
+      "from": "c_safeobserve",
+      "to": "p_display",
+      "src": "core/ProbeRegistry.kt all[] order (probe 3 of 12)"
+    },
+    {
+      "id": "t06",
+      "from": "c_safeobserve",
+      "to": "p_mediaroute",
+      "src": "core/ProbeRegistry.kt all[] order (probe 4 of 12)"
+    },
+    {
+      "id": "t07",
+      "from": "c_safeobserve",
+      "to": "p_wifip2p",
+      "src": "core/ProbeRegistry.kt all[] order (probe 5 of 12)"
+    },
+    {
+      "id": "t08",
+      "from": "c_safeobserve",
+      "to": "p_connectivity",
+      "src": "core/ProbeRegistry.kt all[] order (probe 6 of 12)"
+    },
+    {
+      "id": "t09",
+      "from": "c_safeobserve",
+      "to": "p_audioroute",
+      "src": "core/ProbeRegistry.kt all[] order (probe 7 of 12)"
+    },
+    {
+      "id": "t10",
+      "from": "c_safeobserve",
+      "to": "p_inputdevice",
+      "src": "core/ProbeRegistry.kt all[] order (probe 8 of 12)"
+    },
+    {
+      "id": "t11",
+      "from": "c_safeobserve",
+      "to": "p_projcap",
+      "src": "core/ProbeRegistry.kt all[] order (probe 9 of 12)"
+    },
+    {
+      "id": "t12",
+      "from": "c_safeobserve",
+      "to": "p_smartview",
+      "src": "core/ProbeRegistry.kt all[] order (probe 10 of 12)"
+    },
+    {
+      "id": "t13",
+      "from": "c_safeobserve",
+      "to": "p_dex",
+      "src": "core/ProbeRegistry.kt all[] order (probe 11 of 12)"
+    },
+    {
+      "id": "t14",
+      "from": "c_safeobserve",
+      "to": "p_androidauto",
+      "src": "core/ProbeRegistry.kt all[] order (probe 12 of 12)"
+    },
+    {
+      "id": "t15",
+      "from": "c_safeobserve",
+      "to": "do_obs_error",
+      "label": "throwable -> ERROR",
+      "src": "core/Probe.kt safeObserve"
+    },
+    {
+      "id": "t16",
+      "from": "do_obs_error",
+      "to": "do_observation",
+      "label": "an ERROR observation, not a negative result",
+      "src": "docs/PRINCIPLES.md P4"
+    },
+    {
+      "id": "t17",
+      "from": "p_device",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "scan/DeviceProbe.kt"
+    },
+    {
+      "id": "t18",
+      "from": "p_codec",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "scan/CodecProbe.kt"
+    },
+    {
+      "id": "t19",
+      "from": "p_display",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "display/DisplayProbe.kt"
+    },
+    {
+      "id": "t20",
+      "from": "p_mediaroute",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "display/MediaRouteProbe.kt"
+    },
+    {
+      "id": "t21",
+      "from": "p_wifip2p",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "net/WifiP2pProbe.kt"
+    },
+    {
+      "id": "t22",
+      "from": "p_connectivity",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "net/ConnectivityProbe.kt"
+    },
+    {
+      "id": "t23",
+      "from": "p_audioroute",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "audio/AudioRouteProbe.kt"
+    },
+    {
+      "id": "t24",
+      "from": "p_inputdevice",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "input/InputDeviceProbe.kt"
+    },
+    {
+      "id": "t25",
+      "from": "p_projcap",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "projection/ProjectionCapabilityProbe.kt"
+    },
+    {
+      "id": "t26",
+      "from": "p_smartview",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "samsung/SmartViewProbe.kt"
+    },
+    {
+      "id": "t27",
+      "from": "p_dex",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "samsung/DexProbe.kt"
+    },
+    {
+      "id": "t28",
+      "from": "p_androidauto",
+      "to": "do_observation",
+      "label": "returns",
+      "src": "auto/AndroidAutoProbe.kt"
+    },
+    {
+      "id": "t29",
+      "from": "do_observation",
+      "to": "c_sessionlogger",
+      "label": "SessionLogger.logAll",
+      "src": "core/ProbeRegistry.kt"
+    },
+    {
+      "id": "t32",
+      "from": "do_logrecord",
+      "to": "art_jsonl",
+      "label": "appended, flushed per line",
+      "src": "docs/architecture.md §5"
+    },
+    {
+      "id": "t33",
+      "from": "c_sessionlogger",
+      "to": "ds_stateflow",
+      "label": "StateFlow",
+      "src": "core/SessionLogger.kt"
+    },
+    {
+      "id": "t34",
+      "from": "ds_stateflow",
+      "to": "ui_logviewer",
+      "label": "live log viewer",
+      "src": "docs/architecture.md §5"
+    },
+    {
+      "id": "t35",
+      "from": "ds_stateflow",
+      "to": "ui_dashboard",
+      "label": "dashboard and screens",
+      "src": "docs/architecture.md §5"
+    },
+    {
+      "id": "t36",
+      "from": "c_proberegistry",
+      "to": "c_sessionlogger",
+      "label": "capability_scan_complete",
+      "src": "core/ProbeRegistry.kt"
+    },
+    {
+      "id": "t37",
+      "from": "c_dashboardkeys",
+      "to": "ui_dashboard",
+      "label": "missingFrom(): a blank field is an alarm",
+      "src": "docs/architecture.md §3 rule 3"
+    },
+    {
+      "id": "t40",
+      "from": "ui_projection",
+      "to": "c_labpermissions",
+      "label": "asks with a reason",
+      "src": "core/LabPermissions.kt"
+    },
+    {
+      "id": "t41",
+      "from": "ui_projection",
+      "to": "api_mpm",
+      "label": "createScreenCaptureIntent",
+      "src": "projection/CaptureEngine.kt"
+    },
+    {
+      "id": "t42",
+      "from": "api_mpm",
+      "to": "n_projservice",
+      "label": "consent -> start FGS",
+      "src": "projection/CaptureEngine.kt"
+    },
+    {
+      "id": "t43",
+      "from": "n_projservice",
+      "to": "api_mp",
+      "label": "getMediaProjection",
+      "src": "projection/CaptureEngine.kt"
+    },
+    {
+      "id": "t44",
+      "from": "api_mp",
+      "to": "api_vd",
+      "label": "registerCallback first",
+      "src": "projection/CaptureEngine.kt"
+    },
+    {
+      "id": "t45",
+      "from": "api_vd",
+      "to": "api_imagereader",
+      "label": "Surface",
+      "src": "projection/CaptureEngine.kt"
+    },
+    {
+      "id": "t46",
+      "from": "api_imagereader",
+      "to": "api_mediacodec",
+      "label": "frames",
+      "src": "projection/H264Encoder.kt"
+    },
+    {
+      "id": "t47",
+      "from": "api_mediacodec",
+      "to": "c_sessionlogger",
+      "label": "fps, metrics, encoder statistics",
+      "src": "projection/MediaProjectionScreen.kt"
+    },
+    {
+      "id": "t48",
+      "from": "rq_a14order",
+      "to": "api_vd",
+      "label": "Android 14+ refuses without a running FGS",
+      "src": "docs/architecture.md §4.5"
+    },
+    {
+      "id": "t49",
+      "from": "api_mediacodec",
+      "to": "do_nottested_sink",
+      "label": "says nothing about the sink",
+      "src": "projection/CaptureEngine.kt KDoc"
+    },
+    {
+      "id": "t50",
+      "from": "do_nottested_sink",
+      "to": "c_sessionlogger",
+      "label": "logged as an observation",
+      "src": "docs/PRINCIPLES.md P3"
+    },
+    {
+      "id": "t51",
+      "from": "n_projservice",
+      "to": "c_sessionlogger",
+      "label": "projection_service_started",
+      "src": "projection/ProjectionService.kt"
+    },
+    {
+      "id": "t60",
+      "from": "ui_report",
+      "to": "c_reportgen",
+      "label": "EXPORT REPORT -> build",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t61",
+      "from": "c_sessionlogger",
+      "to": "c_reportgen",
+      "label": "supplies the run's LogRecords",
+      "src": "report/ReportGenerator.kt"
+    },
+    {
+      "id": "t62",
+      "from": "c_reportgen",
+      "to": "art_md",
+      "label": "20 sections; 15-18 from the enum",
+      "src": "report/ReportGenerator.kt"
+    },
+    {
+      "id": "t63",
+      "from": "ui_report",
+      "to": "art_json",
+      "label": "EXPORT JSON",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t64",
+      "from": "ui_report",
+      "to": "art_csv",
+      "label": "EXPORT CSV",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t65",
+      "from": "art_md",
+      "to": "n_fileprovider",
+      "label": "getUriForFile",
+      "src": "report/ReportScreen.kt shareFile"
+    },
+    {
+      "id": "t66",
+      "from": "art_json",
+      "to": "n_fileprovider",
+      "label": "getUriForFile",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t67",
+      "from": "art_csv",
+      "to": "n_fileprovider",
+      "label": "getUriForFile",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t68",
+      "from": "n_fileprovider",
+      "to": "n_chooser",
+      "label": "content:// URI, read permission granted",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "t69",
+      "from": "ui_report",
+      "to": "c_sessionlogger",
+      "label": "export_shared",
+      "src": "report/ReportScreen.kt"
+    },
+    {
+      "id": "j01",
+      "from": "ba_tester",
+      "to": "w1",
+      "label": "runs",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j02",
+      "from": "w1",
+      "to": "w2",
+      "label": "baseline recorded",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j03",
+      "from": "w2",
+      "to": "ev_intent",
+      "label": "opens the panel if it resolves",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j04",
+      "from": "ev_intent",
+      "to": "w3",
+      "label": "then watch",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j05",
+      "from": "w3",
+      "to": "ev_display",
+      "label": "timestamped change list",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j06",
+      "from": "ev_display",
+      "to": "w4",
+      "label": "project the scene",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j07",
+      "from": "w4",
+      "to": "w5",
+      "label": "pattern on the car screen",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j08",
+      "from": "w5",
+      "to": "w6",
+      "label": "record what you saw",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j09",
+      "from": "w6",
+      "to": "ev_input",
+      "label": "touch the car screen",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j10",
+      "from": "ev_input",
+      "to": "w7",
+      "label": "then export",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j11",
+      "from": "w7",
+      "to": "bo_matrix",
+      "label": "wizard summary",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j12",
+      "from": "w4",
+      "to": "bo_photo",
+      "label": "photograph the screen",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j13",
+      "from": "w3",
+      "to": "bo_structural",
+      "label": "stays NOT_TESTED",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §2"
+    },
+    {
+      "id": "j20",
+      "from": "ba_tester",
+      "to": "bp_prep",
+      "label": "prepares",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §0"
+    },
+    {
+      "id": "j21",
+      "from": "bp_prep",
+      "to": "bo_baseline",
+      "label": "exports",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §0"
+    },
+    {
+      "id": "j22",
+      "from": "bp_prep",
+      "to": "bp_rowa",
+      "label": "drive to the car",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §1"
+    },
+    {
+      "id": "j23",
+      "from": "bp_rowa",
+      "to": "w1",
+      "label": "row A recorded; the wizard drives §2",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §1-2"
+    },
+    {
+      "id": "j24",
+      "from": "w7",
+      "to": "bp_input",
+      "label": "next experiment",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3"
+    },
+    {
+      "id": "j25",
+      "from": "bp_input",
+      "to": "ev_mouse",
+      "label": "sanity-check the instrument",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3"
+    },
+    {
+      "id": "j26",
+      "from": "ev_mouse",
+      "to": "ev_input",
+      "label": "only then run the grid",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3"
+    },
+    {
+      "id": "j27",
+      "from": "ev_input",
+      "to": "bo_verdict",
+      "label": "verdict recorded",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §3"
+    },
+    {
+      "id": "j28",
+      "from": "bp_input",
+      "to": "bp_audio",
+      "label": "next experiment",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §4"
+    },
+    {
+      "id": "j29",
+      "from": "bp_audio",
+      "to": "bo_avrec",
+      "label": "record on a second phone",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §4"
+    },
+    {
+      "id": "j30",
+      "from": "bp_audio",
+      "to": "bp_dex",
+      "label": "next experiment",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §5"
+    },
+    {
+      "id": "j31",
+      "from": "bp_dex",
+      "to": "ev_dex",
+      "label": "offered as a target?",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §5"
+    },
+    {
+      "id": "j32",
+      "from": "ev_dex",
+      "to": "bp_auto",
+      "label": "next experiment",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §6"
+    },
+    {
+      "id": "j33",
+      "from": "bp_auto",
+      "to": "ev_order",
+      "label": "rows D and F",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §6"
+    },
+    {
+      "id": "j34",
+      "from": "ev_order",
+      "to": "bo_matrix",
+      "label": "which order survives is the finding",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §6"
+    },
+    {
+      "id": "j35",
+      "from": "bp_auto",
+      "to": "bp_motion",
+      "label": "next experiment",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §7"
+    },
+    {
+      "id": "j36",
+      "from": "bp_motion",
+      "to": "ev_bench",
+      "label": "bench available?",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §7"
+    },
+    {
+      "id": "j37",
+      "from": "ev_bench",
+      "to": "ev_blocked",
+      "label": "observe the receiver",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "j38",
+      "from": "ev_blocked",
+      "to": "bp_close",
+      "label": "recorded as a finding; no bypass",
+      "src": "SAFETY.md"
+    },
+    {
+      "id": "j39",
+      "from": "bp_motion",
+      "to": "bp_close",
+      "label": "close the session",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §8"
+    },
+    {
+      "id": "j40",
+      "from": "bp_close",
+      "to": "bo_jsonl_run",
+      "label": "pull the evidence",
+      "src": "docs/toyota-mirai-2025-test-procedure.md §8"
+    },
+    {
+      "id": "j41",
+      "from": "bp_close",
+      "to": "bo_notfilled",
+      "label": "never from memory",
+      "src": "docs/toyota-mirai-2025-test-procedure.md closing line"
+    }
+  ],
+  "views": [
+    {
+      "id": "conceptueel",
+      "label": "Conceptueel",
+      "description": "Drivers, goals, the evidence-grading principles P1-P12, the SAFETY.md boundary and the capabilities.",
+      "source": "README.md · docs/architecture.md §1,§3,§7 · docs/PRINCIPLES.md · SAFETY.md · version.json",
+      "canvas": [
+        1560,
+        980
+      ],
+      "include": {
+        "elements": [
+          "dr_unknown",
+          "dr_false",
+          "as_state",
+          "go_empirical",
+          "go_evidence",
+          "go_experiments",
+          "rq_grade",
+          "rq_mechanical",
+          "rq_safeobserve",
+          "rq_missing",
+          "rq_sink",
+          "p1",
+          "p2",
+          "p3",
+          "p4",
+          "p5",
+          "p6",
+          "p7",
+          "p8",
+          "p9",
+          "p10",
+          "p11",
+          "p12",
+          "cs_rule",
+          "cs_can",
+          "cs_spoof",
+          "cs_firmware",
+          "cs_aaspoof",
+          "cs_aacat",
+          "cs_bus",
+          "cs_evasion",
+          "cs_internet",
+          "cs_private",
+          "cs_bench",
+          "cs_root",
+          "cs_escal",
+          "cs_novehicle",
+          "cs_nomiracast",
+          "cs_nohidden",
+          "cap_inventory",
+          "cap_wizard",
+          "cap_scene",
+          "cap_audio",
+          "cap_touchback",
+          "cap_projection",
+          "cap_matrix",
+          "cap_motion",
+          "cap_report"
+        ]
+      },
+      "layout": {
+        "dr_unknown": [
+          30,
+          24
+        ],
+        "dr_false": [
+          222,
+          24
+        ],
+        "as_state": [
+          414,
+          24
+        ],
+        "go_empirical": [
+          798,
+          24
+        ],
+        "go_evidence": [
+          990,
+          24
+        ],
+        "go_experiments": [
+          1182,
+          24
+        ],
+        "rq_grade": [
+          30,
+          142
+        ],
+        "rq_mechanical": [
+          222,
+          142
+        ],
+        "rq_safeobserve": [
+          414,
+          142
+        ],
+        "rq_missing": [
+          606,
+          142
+        ],
+        "rq_sink": [
+          798,
+          142
+        ],
+        "p1": [
+          30,
+          260
+        ],
+        "p2": [
+          222,
+          260
+        ],
+        "p3": [
+          414,
+          260
+        ],
+        "p4": [
+          606,
+          260
+        ],
+        "p5": [
+          798,
+          260
+        ],
+        "p6": [
+          990,
+          260
+        ],
+        "p7": [
+          1182,
+          260
+        ],
+        "p8": [
+          1374,
+          260
+        ],
+        "p9": [
+          30,
+          378
+        ],
+        "p10": [
+          222,
+          378
+        ],
+        "p11": [
+          414,
+          378
+        ],
+        "p12": [
+          606,
+          378
+        ],
+        "cs_rule": [
+          30,
+          496
+        ],
+        "cs_can": [
+          222,
+          496
+        ],
+        "cs_spoof": [
+          414,
+          496
+        ],
+        "cs_firmware": [
+          606,
+          496
+        ],
+        "cs_aaspoof": [
+          798,
+          496
+        ],
+        "cs_aacat": [
+          990,
+          496
+        ],
+        "cs_bus": [
+          1182,
+          496
+        ],
+        "cs_evasion": [
+          1374,
+          496
+        ],
+        "cs_internet": [
+          30,
+          614
+        ],
+        "cs_private": [
+          222,
+          614
+        ],
+        "cs_bench": [
+          414,
+          614
+        ],
+        "cs_root": [
+          606,
+          614
+        ],
+        "cs_escal": [
+          798,
+          614
+        ],
+        "cs_novehicle": [
+          990,
+          614
+        ],
+        "cs_nomiracast": [
+          1182,
+          614
+        ],
+        "cs_nohidden": [
+          1374,
+          614
+        ],
+        "cap_inventory": [
+          30,
+          732
+        ],
+        "cap_wizard": [
+          222,
+          732
+        ],
+        "cap_scene": [
+          414,
+          732
+        ],
+        "cap_audio": [
+          606,
+          732
+        ],
+        "cap_touchback": [
+          798,
+          732
+        ],
+        "cap_projection": [
+          990,
+          732
+        ],
+        "cap_matrix": [
+          1182,
+          732
+        ],
+        "cap_motion": [
+          1374,
+          732
+        ],
+        "cap_report": [
+          30,
+          850
+        ]
+      }
+    },
+    {
+      "id": "logisch",
+      "label": "Logisch",
+      "description": "The module graph: core at the centre, ten feature modules depending on it only, ProbeRegistry and LabNavHost as the two places that know many modules.",
+      "source": "docs/architecture.md §2, §4.1 · ARCHITECTURE.md Units · core/ProbeRegistry.kt · ui/LabNavHost.kt",
+      "canvas": [
+        1560,
+        530
+      ],
+      "include": {
+        "elements": [
+          "c_evidence",
+          "c_probe",
+          "c_sessionlogger",
+          "c_json",
+          "c_labpermissions",
+          "c_dashboardkeys",
+          "do_observation",
+          "c_labnavhost",
+          "mod_ui",
+          "mod_core",
+          "c_proberegistry",
+          "do_logrecord",
+          "mod_scan",
+          "mod_display",
+          "mod_net",
+          "mod_audio",
+          "mod_input",
+          "mod_projection",
+          "mod_scene",
+          "mod_samsung",
+          "mod_auto",
+          "mod_report"
+        ]
+      },
+      "layout": {
+        "c_evidence": [
+          30,
+          24
+        ],
+        "c_probe": [
+          220,
+          24
+        ],
+        "c_sessionlogger": [
+          410,
+          24
+        ],
+        "c_json": [
+          600,
+          24
+        ],
+        "c_labpermissions": [
+          790,
+          24
+        ],
+        "c_dashboardkeys": [
+          980,
+          24
+        ],
+        "do_observation": [
+          1360,
+          24
+        ],
+        "c_labnavhost": [
+          30,
+          148
+        ],
+        "mod_ui": [
+          220,
+          148
+        ],
+        "mod_core": [
+          600,
+          148
+        ],
+        "c_proberegistry": [
+          1170,
+          148
+        ],
+        "do_logrecord": [
+          1360,
+          148
+        ],
+        "mod_scan": [
+          30,
+          272
+        ],
+        "mod_display": [
+          220,
+          272
+        ],
+        "mod_net": [
+          410,
+          272
+        ],
+        "mod_audio": [
+          600,
+          272
+        ],
+        "mod_input": [
+          790,
+          272
+        ],
+        "mod_projection": [
+          980,
+          272
+        ],
+        "mod_scene": [
+          1170,
+          272
+        ],
+        "mod_samsung": [
+          410,
+          396
+        ],
+        "mod_auto": [
+          600,
+          396
+        ],
+        "mod_report": [
+          790,
+          396
+        ]
+      }
+    },
+    {
+      "id": "fysiek",
+      "label": "Fysiek",
+      "description": "Activities, the mediaProjection foreground service, FileProvider, app-private evidence and report files, the Gradle build, the APK, the HorseAPK publish target and the workstation tools.",
+      "source": "AndroidManifest.xml · ARCHITECTURE.md Runtime/Storage/Deploy · BUILD.md · docs/DEPENDENCIES.md · tools/*/README.md",
+      "canvas": [
+        1560,
+        690
+      ],
+      "include": {
+        "elements": [
+          "n_hc55",
+          "n_gradle",
+          "art_apk_debug",
+          "n_emulator",
+          "art_apk_dist",
+          "n_horseapk",
+          "art_tools_adb",
+          "dev_zfold",
+          "ss_android",
+          "cn_wifi",
+          "dev_mirai",
+          "cn_adb",
+          "n_app",
+          "cn_usb",
+          "art_tools_report",
+          "n_mainactivity",
+          "n_presentation",
+          "n_projservice",
+          "n_fileprovider",
+          "n_filesdir",
+          "art_jsonl",
+          "art_md",
+          "art_json",
+          "art_csv"
+        ]
+      },
+      "layout": {
+        "n_hc55": [
+          30,
+          24
+        ],
+        "n_gradle": [
+          220,
+          24
+        ],
+        "art_apk_debug": [
+          410,
+          24
+        ],
+        "n_emulator": [
+          600,
+          24
+        ],
+        "art_apk_dist": [
+          790,
+          24
+        ],
+        "n_horseapk": [
+          980,
+          24
+        ],
+        "art_tools_adb": [
+          1360,
+          24
+        ],
+        "dev_zfold": [
+          410,
+          150
+        ],
+        "ss_android": [
+          600,
+          150
+        ],
+        "cn_wifi": [
+          980,
+          150
+        ],
+        "dev_mirai": [
+          1170,
+          150
+        ],
+        "cn_adb": [
+          1360,
+          150
+        ],
+        "n_app": [
+          600,
+          276
+        ],
+        "cn_usb": [
+          980,
+          276
+        ],
+        "art_tools_report": [
+          1360,
+          276
+        ],
+        "n_mainactivity": [
+          30,
+          402
+        ],
+        "n_presentation": [
+          220,
+          402
+        ],
+        "n_projservice": [
+          410,
+          402
+        ],
+        "n_fileprovider": [
+          600,
+          402
+        ],
+        "n_filesdir": [
+          980,
+          402
+        ],
+        "art_jsonl": [
+          790,
+          528
+        ],
+        "art_md": [
+          980,
+          528
+        ],
+        "art_json": [
+          1170,
+          528
+        ],
+        "art_csv": [
+          1360,
+          528
+        ]
+      }
+    },
+    {
+      "id": "transacties",
+      "label": "Transacties",
+      "description": "Three animated chains: the capability scan (with the safeObserve failure path), the MediaProjection consent chain with its Android 14 ordering constraint, and the report chain.",
+      "source": "docs/architecture.md §5, §4.5 · core/ProbeRegistry.kt · core/Probe.kt · projection/CaptureEngine.kt · report/ReportScreen.kt",
+      "canvas": [
+        1790,
+        940
+      ],
+      "include": {
+        "elements": [
+          "ui_dashboard",
+          "c_proberegistry",
+          "c_safeobserve",
+          "do_obs_error",
+          "p_device",
+          "p_codec",
+          "p_display",
+          "p_mediaroute",
+          "p_wifip2p",
+          "p_connectivity",
+          "p_audioroute",
+          "p_inputdevice",
+          "p_projcap",
+          "p_smartview",
+          "p_dex",
+          "p_androidauto",
+          "do_observation",
+          "c_dashboardkeys",
+          "c_sessionlogger",
+          "ds_stateflow",
+          "ui_logviewer",
+          "c_json",
+          "do_logrecord",
+          "art_jsonl",
+          "ui_projection",
+          "c_labpermissions",
+          "api_mpm",
+          "n_projservice",
+          "api_mp",
+          "rq_a14order",
+          "api_vd",
+          "api_imagereader",
+          "api_mediacodec",
+          "do_nottested_sink",
+          "ui_report",
+          "c_reportgen",
+          "art_md",
+          "art_json",
+          "art_csv",
+          "n_fileprovider",
+          "n_chooser"
+        ]
+      },
+      "layout": {
+        "ui_dashboard": [
+          30,
+          24
+        ],
+        "c_proberegistry": [
+          222,
+          24
+        ],
+        "c_safeobserve": [
+          414,
+          24
+        ],
+        "do_obs_error": [
+          606,
+          24
+        ],
+        "p_device": [
+          30,
+          136
+        ],
+        "p_codec": [
+          222,
+          136
+        ],
+        "p_display": [
+          414,
+          136
+        ],
+        "p_mediaroute": [
+          606,
+          136
+        ],
+        "p_wifip2p": [
+          30,
+          248
+        ],
+        "p_connectivity": [
+          222,
+          248
+        ],
+        "p_audioroute": [
+          414,
+          248
+        ],
+        "p_inputdevice": [
+          606,
+          248
+        ],
+        "p_projcap": [
+          30,
+          360
+        ],
+        "p_smartview": [
+          222,
+          360
+        ],
+        "p_dex": [
+          414,
+          360
+        ],
+        "p_androidauto": [
+          606,
+          360
+        ],
+        "do_observation": [
+          222,
+          472
+        ],
+        "c_dashboardkeys": [
+          30,
+          472
+        ],
+        "c_sessionlogger": [
+          606,
+          472
+        ],
+        "ds_stateflow": [
+          798,
+          472
+        ],
+        "ui_logviewer": [
+          990,
+          472
+        ],
+        "c_json": [
+          414,
+          584
+        ],
+        "do_logrecord": [
+          606,
+          584
+        ],
+        "art_jsonl": [
+          606,
+          696
+        ],
+        "ui_projection": [
+          990,
+          24
+        ],
+        "c_labpermissions": [
+          990,
+          136
+        ],
+        "api_mpm": [
+          1182,
+          24
+        ],
+        "n_projservice": [
+          1374,
+          24
+        ],
+        "api_mp": [
+          1566,
+          24
+        ],
+        "rq_a14order": [
+          1374,
+          136
+        ],
+        "api_vd": [
+          1566,
+          136
+        ],
+        "api_imagereader": [
+          1566,
+          248
+        ],
+        "api_mediacodec": [
+          1566,
+          360
+        ],
+        "do_nottested_sink": [
+          1374,
+          360
+        ],
+        "ui_report": [
+          990,
+          584
+        ],
+        "c_reportgen": [
+          1182,
+          584
+        ],
+        "art_md": [
+          1374,
+          584
+        ],
+        "art_json": [
+          1374,
+          696
+        ],
+        "art_csv": [
+          1374,
+          808
+        ],
+        "n_fileprovider": [
+          1566,
+          696
+        ],
+        "n_chooser": [
+          1566,
+          808
+        ]
+      },
+      "scenarios": [
+        "scan_chain",
+        "projection_chain",
+        "report_chain"
+      ],
+      "scenario": "scan_chain"
+    },
+    {
+      "id": "journeys",
+      "label": "Journeys",
+      "description": "The seven-step Miracast wizard and the whole in-car session, with the decision points and what the tester records at each one.",
+      "source": "docs/toyota-mirai-2025-test-procedure.md · SAFETY.md",
+      "canvas": [
+        1790,
+        730
+      ],
+      "include": {
+        "elements": [
+          "ba_tester",
+          "bp_prep",
+          "bo_baseline",
+          "bp_rowa",
+          "w1",
+          "w2",
+          "ev_intent",
+          "w3",
+          "ev_display",
+          "w4",
+          "w5",
+          "w6",
+          "ev_input",
+          "w7",
+          "bo_structural",
+          "bo_photo",
+          "bo_matrix",
+          "bp_input",
+          "ev_mouse",
+          "bo_verdict",
+          "bp_audio",
+          "bo_avrec",
+          "bp_dex",
+          "ev_dex",
+          "bp_auto",
+          "ev_order",
+          "bp_motion",
+          "ev_bench",
+          "ev_blocked",
+          "bp_close",
+          "bo_jsonl_run",
+          "bo_notfilled"
+        ]
+      },
+      "layout": {
+        "ba_tester": [
+          30,
+          24
+        ],
+        "bp_prep": [
+          222,
+          24
+        ],
+        "bo_baseline": [
+          414,
+          24
+        ],
+        "bp_rowa": [
+          606,
+          24
+        ],
+        "w1": [
+          30,
+          144
+        ],
+        "w2": [
+          222,
+          144
+        ],
+        "ev_intent": [
+          414,
+          144
+        ],
+        "w3": [
+          606,
+          144
+        ],
+        "ev_display": [
+          798,
+          144
+        ],
+        "w4": [
+          990,
+          144
+        ],
+        "w5": [
+          1182,
+          144
+        ],
+        "w6": [
+          1374,
+          144
+        ],
+        "ev_input": [
+          1566,
+          144
+        ],
+        "w7": [
+          30,
+          264
+        ],
+        "bo_structural": [
+          606,
+          264
+        ],
+        "bo_photo": [
+          990,
+          264
+        ],
+        "bo_matrix": [
+          1374,
+          264
+        ],
+        "bp_input": [
+          222,
+          384
+        ],
+        "ev_mouse": [
+          414,
+          384
+        ],
+        "bo_verdict": [
+          606,
+          384
+        ],
+        "bp_audio": [
+          990,
+          384
+        ],
+        "bo_avrec": [
+          1182,
+          384
+        ],
+        "bp_dex": [
+          222,
+          504
+        ],
+        "ev_dex": [
+          414,
+          504
+        ],
+        "bp_auto": [
+          798,
+          504
+        ],
+        "ev_order": [
+          990,
+          504
+        ],
+        "bp_motion": [
+          222,
+          624
+        ],
+        "ev_bench": [
+          414,
+          624
+        ],
+        "ev_blocked": [
+          606,
+          624
+        ],
+        "bp_close": [
+          990,
+          624
+        ],
+        "bo_jsonl_run": [
+          1182,
+          624
+        ],
+        "bo_notfilled": [
+          1374,
+          624
+        ]
+      },
+      "scenarios": [
+        "miracast_wizard",
+        "in_car_session"
+      ],
+      "scenario": "miracast_wizard"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "scan_chain",
+      "label": "a. Capability scan (dashboard -> 12 probes -> evidence)",
+      "source": "docs/architecture.md §5 · core/ProbeRegistry.kt",
+      "steps": [
+        {
+          "rel": "t01",
+          "narrative": "Tester taps RUN DEVICE SCAN on the dashboard; ProbeRegistry.runAll(context, onProgress) starts. [docs/architecture.md §5]"
+        },
+        {
+          "rel": "t02",
+          "narrative": "runAll walks ProbeRegistry.all in scan order and calls probe.safeObserve for each. [core/ProbeRegistry.kt]"
+        },
+        {
+          "rel": "t03",
+          "narrative": "Probe 1/12: DeviceProbe - read-only, idempotent, non-throwing. [scan/DeviceProbe.kt]"
+        },
+        {
+          "rel": "t04",
+          "narrative": "Probe 2/12: CodecProbe - read-only, idempotent, non-throwing. [scan/CodecProbe.kt]"
+        },
+        {
+          "rel": "t05",
+          "narrative": "Probe 3/12: DisplayProbe - read-only, idempotent, non-throwing. [display/DisplayProbe.kt]"
+        },
+        {
+          "rel": "t06",
+          "narrative": "Probe 4/12: MediaRouteProbe - read-only, idempotent, non-throwing. [display/MediaRouteProbe.kt]"
+        },
+        {
+          "rel": "t07",
+          "narrative": "Probe 5/12: WifiP2pProbe - read-only, idempotent, non-throwing. [net/WifiP2pProbe.kt]"
+        },
+        {
+          "rel": "t08",
+          "narrative": "Probe 6/12: ConnectivityProbe - read-only, idempotent, non-throwing. [net/ConnectivityProbe.kt]"
+        },
+        {
+          "rel": "t09",
+          "narrative": "Probe 7/12: AudioRouteProbe - read-only, idempotent, non-throwing. [audio/AudioRouteProbe.kt]"
+        },
+        {
+          "rel": "t10",
+          "narrative": "Probe 8/12: InputDeviceProbe - read-only, idempotent, non-throwing. [input/InputDeviceProbe.kt]"
+        },
+        {
+          "rel": "t11",
+          "narrative": "Probe 9/12: ProjectionCapabilityProbe - read-only, idempotent, non-throwing. [projection/ProjectionCapabilityProbe.kt]"
+        },
+        {
+          "rel": "t12",
+          "narrative": "Probe 10/12: SmartViewProbe - read-only, idempotent, non-throwing. [samsung/SmartViewProbe.kt]"
+        },
+        {
+          "rel": "t13",
+          "narrative": "Probe 11/12: DexProbe - read-only, idempotent, non-throwing. [samsung/DexProbe.kt]"
+        },
+        {
+          "rel": "t14",
+          "narrative": "Probe 12/12: AndroidAutoProbe - read-only, idempotent, non-throwing. [auto/AndroidAutoProbe.kt]"
+        },
+        {
+          "rel": "t15",
+          "narrative": "FAILURE PATH: a probe throws. safeObserve catches the throwable. [core/Probe.kt]"
+        },
+        {
+          "rel": "t16",
+          "narrative": "It becomes Observation.error whose note says the capability itself is untested - an ERROR observation, never a negative result about the device. [docs/PRINCIPLES.md P4]"
+        },
+        {
+          "rel": "t23",
+          "narrative": "Every probe returns a List<Observation>; each observation carries its own LabStatus. [docs/architecture.md §3]"
+        },
+        {
+          "rel": "t29",
+          "narrative": "SessionLogger.logAll(found): the single sink for the whole process. [core/ProbeRegistry.kt]"
+        },
+        {
+          "rel": "t30",
+          "narrative": "One LogRecord per observation: timestamp, elapsedRealtimeMs, testRunId, category, event, status, details. [README.md]"
+        },
+        {
+          "rel": "t31",
+          "narrative": "core/Json.kt serialises it - 50 lines, dependency-free. [docs/DEPENDENCIES.md]"
+        },
+        {
+          "rel": "t32",
+          "narrative": "Appended to evidence/run-<ts>-<id>.jsonl and flushed per line, so a process kill loses at most the current record. [docs/architecture.md §4.1]"
+        },
+        {
+          "rel": "t33",
+          "narrative": "The same record lands in the in-memory StateFlow, capped at 5000. [core/SessionLogger.kt]"
+        },
+        {
+          "rel": "t35",
+          "narrative": "Dashboard and screens collect the StateFlow; DashboardKeys.missingFrom() marks any key no probe produced. [docs/architecture.md §3, §5]"
+        },
+        {
+          "rel": "t36",
+          "narrative": "capability_scan_complete is logged with the probe and observation counts. [core/ProbeRegistry.kt]"
+        }
+      ]
+    },
+    {
+      "id": "projection_chain",
+      "label": "b. MediaProjection consent chain (Android 14 ordering)",
+      "source": "projection/CaptureEngine.kt KDoc · docs/architecture.md §4.5",
+      "steps": [
+        {
+          "rel": "t40",
+          "narrative": "MediaProjectionScreen requests POST_NOTIFICATIONS through LabPermissions, with a tester-facing reason. Denial degrades the probe to NOT_TESTED; it never blocks the app. [SAFETY.md]"
+        },
+        {
+          "rel": "t41",
+          "narrative": "MediaProjectionManager.createScreenCaptureIntent - the consent dialog. Step 1 of the non-negotiable order. [projection/CaptureEngine.kt]"
+        },
+        {
+          "rel": "t42",
+          "narrative": "Consent granted -> start the foreground service, type mediaProjection. Step 2. [docs/architecture.md §4.5]"
+        },
+        {
+          "rel": "t51",
+          "narrative": "ProjectionService logs projection_service_started (CONFIRMED) with the SDK level. It holds no capture logic. [projection/ProjectionService.kt]"
+        },
+        {
+          "rel": "t43",
+          "narrative": "getMediaProjection(resultCode, data). Step 3. [projection/CaptureEngine.kt]"
+        },
+        {
+          "rel": "t48",
+          "narrative": "CONSTRAINT: Android 14+ refuses createVirtualDisplay unless the FGS is already running, and requires registerCallback before it. Getting the order wrong throws SecurityException. [docs/architecture.md §4.5, docs/DEPENDENCIES.md]"
+        },
+        {
+          "rel": "t44",
+          "narrative": "registerCallback (step 4) and only then createVirtualDisplay (step 5). [projection/CaptureEngine.kt]"
+        },
+        {
+          "rel": "t45",
+          "narrative": "The VirtualDisplay draws into the Surface of an ImageReader. [projection/CaptureEngine.kt]"
+        },
+        {
+          "rel": "t46",
+          "narrative": "Frames arrive on a single HandlerThread and feed the H.264 encoder. [projection/H264Encoder.kt]"
+        },
+        {
+          "rel": "t47",
+          "narrative": "Capture FPS, VirtualDisplay metrics and encoder statistics are logged. [README.md screens table]"
+        },
+        {
+          "rel": "t49",
+          "narrative": "P3: what this proves is what the phone can capture and encode locally - nothing about what the Toyota head unit receives. [projection/CaptureEngine.kt KDoc]"
+        },
+        {
+          "rel": "t50",
+          "narrative": "So an explicit NOT_TESTED observation is logged at the end of every session, so the claim cannot drift in the report. [docs/PRINCIPLES.md P3]"
+        }
+      ]
+    },
+    {
+      "id": "report_chain",
+      "label": "c. Report chain (SessionLogger -> Markdown / JSON / CSV -> share)",
+      "source": "docs/architecture.md §5 · report/ReportGenerator.kt · report/ReportScreen.kt",
+      "steps": [
+        {
+          "rel": "t60",
+          "narrative": "EXPORT REPORT on the report screen calls ReportGenerator.build. [report/ReportScreen.kt]"
+        },
+        {
+          "rel": "t61",
+          "narrative": "SessionLogger supplies every LogRecord of the run. [report/ReportGenerator.kt]"
+        },
+        {
+          "rel": "t62",
+          "narrative": "20 sections are always emitted; sections 15-18 (confirmed / inferred / unsupported / still requires hardware) are derived mechanically from LabStatus, so no prose step can promote NOT_TESTED. [docs/architecture.md §3]"
+        },
+        {
+          "rel": "t63",
+          "narrative": "EXPORT JSON writes SessionLogger.exportJson(). [report/ReportScreen.kt]"
+        },
+        {
+          "rel": "t64",
+          "narrative": "EXPORT CSV writes SessionLogger.exportCsv(). [report/ReportScreen.kt]"
+        },
+        {
+          "rel": "t65",
+          "narrative": "FileProvider.getUriForFile(packageName + '.fileprovider', file) for the Markdown report. [report/ReportScreen.kt shareFile]"
+        },
+        {
+          "rel": "t66",
+          "narrative": "The same for the JSON export. [report/ReportScreen.kt]"
+        },
+        {
+          "rel": "t67",
+          "narrative": "The same for the CSV export. [report/ReportScreen.kt]"
+        },
+        {
+          "rel": "t68",
+          "narrative": "ACTION_SEND chooser with FLAG_GRANT_READ_URI_PERMISSION. The files never leave app-private storage otherwise - the app has no INTERNET permission. [report/ReportScreen.kt, SAFETY.md]"
+        },
+        {
+          "rel": "t69",
+          "narrative": "export_shared is itself logged, so the evidence file records that the evidence was exported. [report/ReportScreen.kt]"
+        }
+      ]
+    },
+    {
+      "id": "miracast_wizard",
+      "label": "Seven-step Miracast wizard (test procedure §2)",
+      "source": "docs/toyota-mirai-2025-test-procedure.md §2",
+      "steps": [
+        {
+          "rel": "j01",
+          "narrative": "The tester opens MIRACAST TEST. The seven-step wizard drives the whole of section 2 (matrix row B)."
+        },
+        {
+          "rel": "j02",
+          "narrative": "Step 1 - Scan baseline. Recorded: display / route / Wi-Fi / P2P / audio snapshot."
+        },
+        {
+          "rel": "j03",
+          "narrative": "Step 2 - Start Smart View from the quick panel and pick the Mirai. DECISION: the app cannot connect for you; it opens the right settings panel only if the intent resolves. A resolvable intent is CONFIRMED, an unresolvable one UNSUPPORTED for this device."
+        },
+        {
+          "rel": "j04",
+          "narrative": "Step 3 - Wait, watching the live change list."
+        },
+        {
+          "rel": "j05",
+          "narrative": "Recorded: every display, route, interface and audio-route change, timestamped."
+        },
+        {
+          "rel": "j13",
+          "narrative": "HONEST LIMIT: negotiated resolution, framerate, codec, HDCP state and UIBC advertisement are reported NOT_TESTED, permanently. They live in the Wi-Fi Display / wpa_supplicant layer, not exposed to third-party apps on a non-rooted device."
+        },
+        {
+          "rel": "j06",
+          "narrative": "Step 4 - Launch scene on external display."
+        },
+        {
+          "rel": "j12",
+          "narrative": "Recorded by the tester: photograph the car screen with another phone. The number of distinct sweep positions gives the delivered frame rate; both frame counters in one frame give the latency."
+        },
+        {
+          "rel": "j07",
+          "narrative": "The diagnostic pattern appears on the car screen: bouncing object, frame counter, 60-position sweep, 1-pixel bars, RGB/greyscale blocks."
+        },
+        {
+          "rel": "j08",
+          "narrative": "Step 5 - For each sub-test, tap what you actually see: VISIBLE / DISTORTED / BLACK / AUDIO ONLY / NOT SHOWN."
+        },
+        {
+          "rel": "j09",
+          "narrative": "Step 6 - Touch the numbered targets on the car screen."
+        },
+        {
+          "rel": "j10",
+          "narrative": "DECISION: any input event that arrives on the phone is recorded with its source, device id, coordinates and pressure. Nothing arriving is NO INPUT OBSERVED for this session - never 'the sink has no back channel'."
+        },
+        {
+          "rel": "j11",
+          "narrative": "Step 7 - Export: a wizard summary with a status per line."
+        }
+      ]
+    },
+    {
+      "id": "in_car_session",
+      "label": "In-car session, sections 0-8 (test procedure)",
+      "source": "docs/toyota-mirai-2025-test-procedure.md",
+      "steps": [
+        {
+          "rel": "j20",
+          "narrative": "§0 Before you leave. Install a debug build and confirm it starts. Grant nearby-devices and notifications when the app asks and explains why; audio and Bluetooth are optional - denying them yields NOT_TESTED, which is correct and harmless."
+        },
+        {
+          "rel": "j21",
+          "narrative": "§0 step 3 - export a Markdown report labelled baseline-no-vehicle: a baseline with no car present, the single most useful reference you will have."
+        },
+        {
+          "rel": "j22",
+          "narrative": "§1 In the car. Vehicle stationary, in park, ignition on (SAFETY.md)."
+        },
+        {
+          "rel": "j23",
+          "narrative": "§1 Row A (OFF / OFF): RUN DEVICE SCAN, then ANDROID AUTO COEXISTENCE TEST row A. Record before anything is connected. Note displays, any p2p* interface, active audio output, and whether Android already reports car mode."
+        },
+        {
+          "rel": "j02",
+          "narrative": "§2 Row B - the seven-step Miracast wizard runs here (see the wizard scenario)."
+        },
+        {
+          "rel": "j24",
+          "narrative": "§3 Touch-back: does the Mirai screen drive the phone?"
+        },
+        {
+          "rel": "j25",
+          "narrative": "DECISION: sanity-check the instrument first with a Bluetooth or USB-C mouse. If the event monitor does not log its movement, the monitor is broken and any negative result below is meaningless."
+        },
+        {
+          "rel": "j26",
+          "narrative": "Run the 3x5 target grid, touching each numbered target on the car's screen."
+        },
+        {
+          "rel": "j27",
+          "narrative": "Recorded: the touch-back verdict with its percentage and source list. NO INPUT OBSERVED is recorded as such, not as 'unsupported'."
+        },
+        {
+          "rel": "j28",
+          "narrative": "§4 Audio: silence, mono tone, stereo L/R identify, continuous tone, latency click, A/V sync pulse."
+        },
+        {
+          "rel": "j29",
+          "narrative": "Recorded: one external A/V recording. The app logs its own timestamps; the end-to-end number can only come from that recording, and the app says so rather than pretending otherwise."
+        },
+        {
+          "rel": "j30",
+          "narrative": "§5 Samsung DeX: start Wireless DeX from the quick panel."
+        },
+        {
+          "rel": "j31",
+          "narrative": "DECISION: is the Mirai even offered as a target? Compare the external display's density and flags against plain Smart View - a different density is the usual discriminator. Record the exact wording if DeX refuses; the wording of the refusal is data."
+        },
+        {
+          "rel": "j32",
+          "narrative": "§6 Android Auto coexistence, rows C-F, worked in order."
+        },
+        {
+          "rel": "j33",
+          "narrative": "DECISION: for D and F, try both connection orders - AA first then Miracast, and the reverse. Watch the Wi-Fi frequency readout: both want the 5 GHz radio."
+        },
+        {
+          "rel": "j34",
+          "narrative": "Recorded: one report per matrix row, plus time-until-disconnect from the in-app timer whenever a session drops. Which order survives is the finding."
+        },
+        {
+          "rel": "j35",
+          "narrative": "§7 Motion state - observation only. Read the safety card at the top of the screen. The car stays stationary."
+        },
+        {
+          "rel": "j36",
+          "narrative": "DECISION: only with a bench head unit or a legitimate stationary test environment is the receiver's vehicle-state input varied - and nothing in this project changes that input."
+        },
+        {
+          "rel": "j37",
+          "narrative": "Record with the marker buttons what the head unit does: PARK, VIDEO VISIBLE, VIDEO BLOCKED, AUDIO ONLY, CONNECTION LOST."
+        },
+        {
+          "rel": "j38",
+          "narrative": "If the Toyota head unit disables video based on vehicle state, that is recorded as a finding and the project stops there. No bypass is built for use on public roads, or anywhere else. [SAFETY.md]"
+        },
+        {
+          "rel": "j39",
+          "narrative": "§8 Close the session: EXPORT REPORT to Markdown, JSON and CSV; note the paths shown on screen."
+        },
+        {
+          "rel": "j40",
+          "narrative": "With a laptop: collect-dumpsys.sh after and pull-evidence.sh. Without: the in-app share sheet. Then disconnect Smart View and Android Auto."
+        },
+        {
+          "rel": "j41",
+          "narrative": "Anything you did not do stays NOT_TESTED in the report. Do not fill it in from memory afterwards."
+        }
+      ]
+    }
+  ]
+};
+/* MODEL-END */
+
+/* ============================================================
+ * STATE
+ * ============================================================ */
+let MODEL = clone(DEFAULT_MODEL);
+let currentViewId = 'conceptueel';
+let currentNotation = 'archimate';
+let currentHeat = 'off'; // off | criticality | completion | cost — actief alleen in Dragon1-modus
+let currentRenderMode = 'blueprint'; // blueprint | sketch — actief alleen in Dragon1-modus
+let animState = {
+  playing: false, loop: true, stepIdx: 0, scenarioId: null,
+  speedMs: 1200, rafHandle: null, lastTickAt: 0, tokenEl: null
+};
+
+/* ============================================================
+ * UTIL
+ * ============================================================ */
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function el(tag, attrs) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function log(msg) {
+  const lg = document.getElementById('log');
+  lg.classList.remove('empty');
+  lg.textContent = msg;
+}
+function clearLog() {
+  const lg = document.getElementById('log');
+  lg.classList.add('empty');
+  lg.textContent = '';
+}
+function elemById(id) { return MODEL.elements.find(e => e.id === id); }
+function relById(id) { return MODEL.relations.find(r => r.id === id); }
+function viewById(id) { return MODEL.views.find(v => v.id === id); }
+function scenarioById(id) { return (MODEL.scenarios || []).find(s => s.id === id); }
+function typeLayer(type) { return TYPE_LAYER[(type || '').toLowerCase()] || 'other'; }
+
+/* ============================================================
+ * GEOMETRIE + PER-VIEW LAYOUT
+ * Een element kan in meerdere views voorkomen; elke view mag zijn
+ * eigen positie opgeven (view.layout). Zonder override geldt e.pos.
+ * Volledig deterministisch: geen meting, geen random, geen tijd.
+ * ============================================================ */
+const ELEM_W = 176, ELEM_H = 72;
+let VIEW_POS = {};
+/* Per render-pass: welke relatie-labels al getekend zijn. Voorkomt dat
+   'hosts' of 'returns' tien keer op dezelfde rij staat. */
+let LABELS_DRAWN = null;
+function applyViewLayout(view) { VIEW_POS = (view && view.layout) || {}; }
+function posOf(e) {
+  if (!e) return [0, 0];
+  const p = VIEW_POS[e.id];
+  return p ? p : (e.pos || [0, 0]);
+}
+function resizeCanvas(view) {
+  const svg = document.getElementById('canvas');
+  const c = (view && view.canvas) || [1300, 900];
+  svg.setAttribute('width', c[0]);
+  svg.setAttribute('height', c[1]);
+  svg.setAttribute('viewBox', '0 0 ' + c[0] + ' ' + c[1]);
+}
+/* Deterministische woord-wrap op tekenlengte (geen DOM-meting). */
+function wrapLabel(text, maxChars, maxLines) {
+  const raw = String(text == null ? '' : text).split(/\s+/).filter(Boolean);
+  // Een woord dat breder is dan het vak wordt hard gesplitst; anders loopt een
+  // pad of constante (FLAG_GRANT_READ_URI_PERMISSION) buiten het element.
+  const words = [];
+  for (let w = 0; w < raw.length; w++) {
+    let word = raw[w];
+    while (word.length > maxChars) {
+      words.push(word.slice(0, maxChars));
+      word = word.slice(maxChars);
+    }
+    if (word) words.push(word);
+  }
+  const lines = [];
+  let cur = '';
+  for (let i = 0; i < words.length; i++) {
+    const cand = cur ? cur + ' ' + words[i] : words[i];
+    if (cand.length > maxChars && cur) {
+      lines.push(cur);
+      cur = words[i];
+      if (lines.length === maxLines) { cur = ''; break; }
+    } else {
+      cur = cand;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  const shown = lines.join(' ').split(/\s+/).filter(Boolean).length;
+  if (shown < words.length && lines.length) {
+    let last = lines[lines.length - 1];
+    if (last.length > maxChars - 1) last = last.slice(0, maxChars - 1);
+    lines[lines.length - 1] = last + '\u2026';
+  }
+  return lines.length ? lines : [''];
+}
+function appendWrappedLabel(g, e, cx, topY, maxChars, maxLines, lineH) {
+  const lines = wrapLabel(e.label || e.id, maxChars, maxLines);
+  const txt = el('text', { class: 'elem-label', x: cx, 'text-anchor': 'middle' });
+  const y0 = topY + (maxLines - lines.length) * lineH / 2;
+  for (let i = 0; i < lines.length; i++) {
+    const ts = el('tspan', { x: cx, y: y0 + i * lineH });
+    ts.textContent = lines[i];
+    txt.appendChild(ts);
+  }
+  g.appendChild(txt);
+}
+/* Tooltip = label + type + toelichting + repo-bron (herkomst zichtbaar). */
+function appendTooltip(g, obj, kind) {
+  const t = el('title');
+  let s = (obj.label || obj.id || '');
+  if (kind === 'element' && obj.type) s += '\n\u00ab' + obj.type + '\u00bb';
+  if (kind === 'relation') s = 'relatie ' + obj.id + ': ' + obj.from + ' \u2192 ' + obj.to +
+                               (obj.label ? ' (' + obj.label + ')' : '');
+  if (obj.description) s += '\n\n' + obj.description;
+  if (obj.src) s += '\n\nBron in de repo: ' + obj.src;
+  t.textContent = s;
+  g.appendChild(t);
+}
+
+/* ============================================================
+ * RENDER
+ * ============================================================ */
+function render() {
+  const svg = document.getElementById('canvas');
+  svg.innerHTML = '';
+  svg.classList.remove('notation-archimate', 'notation-dragon1', 'sketch-mode');
+  svg.classList.add('notation-' + currentNotation);
+  if (currentNotation === 'dragon1' && currentRenderMode === 'sketch') {
+    svg.classList.add('sketch-mode');
+  }
+
+  // 1. defs (markers + roughen-filter)
+  svg.appendChild(buildDefs());
+
+  // 2. bepaal welke elementen + relaties zichtbaar zijn in deze view
+  const view = viewById(currentViewId);
+  applyViewLayout(view);
+  resizeCanvas(view);
+  const visibleElems = filterElementsForView(view);
+  const visibleIds = new Set(visibleElems.map(e => e.id));
+  const visibleRels = MODEL.relations.filter(r =>
+    visibleIds.has(r.from) && visibleIds.has(r.to)
+  );
+
+  // 2b. Landscape-backdrop — alleen Dragon1 + view = conceptueel/logisch (advies-keuze 3)
+  const backdropViews = new Set(['conceptueel', 'logisch']);
+  if (currentNotation === 'dragon1' && backdropViews.has(currentViewId)) {
+    svg.appendChild(buildLandscapeBackdrop(view));
+  }
+
+  // 3. render relaties (lager z-order)
+  LABELS_DRAWN = new Set();
+  const relsGroup = el('g', { id: 'relations-layer' });
+  visibleRels.forEach(r => relsGroup.appendChild(renderRelation(r)));
+  svg.appendChild(relsGroup);
+
+  // 4. render elementen
+  const elemsGroup = el('g', { id: 'elements-layer' });
+  visibleElems.forEach(e => elemsGroup.appendChild(renderElement(e)));
+  svg.appendChild(elemsGroup);
+
+  // 5. animatie-token-laag (apart, bovenop)
+  const animLayer = el('g', { id: 'animation-layer' });
+  svg.appendChild(animLayer);
+
+  // 6. info-paneel + legenda updaten
+  updateInfo(view, visibleElems.length, visibleRels.length);
+  updateLegend(visibleElems);
+
+  // 7. animatie controls aan/uit
+  const animBox = document.getElementById('animControls');
+  const scList = (view && view.scenarios && view.scenarios.length)
+    ? view.scenarios
+    : ((view && view.scenario) ? [view.scenario] : []);
+  if (scList.length) {
+    animBox.classList.add('visible');
+    const sel = document.getElementById('scenarioSelect');
+    if (sel.getAttribute('data-view-id') !== view.id) {
+      sel.innerHTML = '';
+      scList.forEach(function (sid) {
+        const o = document.createElement('option');
+        o.value = sid;
+        o.textContent = (scenarioById(sid) || { label: sid }).label;
+        sel.appendChild(o);
+      });
+      sel.setAttribute('data-view-id', view.id);
+      sel.value = view.scenario || scList[0];
+      animState.scenarioId = sel.value;
+    }
+    if (scList.indexOf(animState.scenarioId) === -1) {
+      animState.scenarioId = scList[0];
+      sel.value = scList[0];
+    }
+    const sc = scenarioById(animState.scenarioId) || { label: '?', steps: [] };
+    document.getElementById('scenarioLabel').textContent =
+      (sc.steps || []).length + ' stappen';
+    animState.stepIdx = 0;
+  } else {
+    animBox.classList.remove('visible');
+    stopAnimation();
+  }
+}
+
+function filterElementsForView(view) {
+  if (!view) return MODEL.elements;
+  const layers = (view.include && view.include.layers) || null;
+  const ids = (view.include && view.include.elements) || null;
+  return MODEL.elements.filter(e => {
+    if (ids && !ids.includes(e.id)) return false;
+    if (layers && !layers.includes(typeLayer(e.type))) return false;
+    return true;
+  });
+}
+
+function buildDefs() {
+  const defs = el('defs');
+  // arrow
+  const m1 = el('marker', {
+    id: 'arrow', viewBox: '0 0 10 10', refX: '9', refY: '5',
+    markerWidth: '8', markerHeight: '8', orient: 'auto-start-reverse'
+  });
+  m1.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--c-arrow)' }));
+  defs.appendChild(m1);
+  // arrow-hollow
+  const m2 = el('marker', {
+    id: 'arrow-hollow', viewBox: '0 0 12 12', refX: '11', refY: '6',
+    markerWidth: '10', markerHeight: '10', orient: 'auto-start-reverse'
+  });
+  m2.appendChild(el('path', {
+    d: 'M0,0 L12,6 L0,12 z', fill: '#fff',
+    stroke: 'var(--c-arrow)', 'stroke-width': '1.5'
+  }));
+  defs.appendChild(m2);
+  // dot
+  const m3 = el('marker', {
+    id: 'dot', viewBox: '0 0 6 6', refX: '3', refY: '3',
+    markerWidth: '6', markerHeight: '6'
+  });
+  m3.appendChild(el('circle', { cx: '3', cy: '3', r: '2.5', fill: 'var(--c-arrow)' }));
+  defs.appendChild(m3);
+  // diamond
+  const m4 = el('marker', {
+    id: 'diamond', viewBox: '0 0 12 8', refX: '0', refY: '4',
+    markerWidth: '10', markerHeight: '8', orient: 'auto'
+  });
+  m4.appendChild(el('path', { d: 'M0,4 L6,0 L12,4 L6,8 z', fill: 'var(--c-arrow)' }));
+  defs.appendChild(m4);
+  // Roughen filter — Dragon1 sketch-mode. Fixed seed=42 voor determinisme.
+  // Bron: docs/DRAGON1_VISUAL_LANGUAGE.md §4 (sketch / artist-impression).
+  const fRough = el('filter', {
+    id: 'roughen', x: '-5%', y: '-5%', width: '110%', height: '110%'
+  });
+  fRough.appendChild(el('feTurbulence', {
+    type: 'fractalNoise', baseFrequency: '0.035', numOctaves: '2', seed: '42', result: 'noise'
+  }));
+  fRough.appendChild(el('feDisplacementMap', {
+    in: 'SourceGraphic', in2: 'noise', scale: '2.5'
+  }));
+  defs.appendChild(fRough);
+  return defs;
+}
+
+/* ============================================================
+ * LANDSCAPE-BACKDROP — Dragon1's "principes-op-landschap"
+ * Bron: docs/DRAGON1_VISUAL_LANGUAGE.md §2.
+ * Tekent semi-transparante horizontale banden per zichtbare laag,
+ * met laag-label rechtsachter (verbleekt) als "context".
+ * View-afhankelijk: alleen Conceptueel + Logisch (advies-keuze 3).
+ * ============================================================ */
+const LAYER_BANDS = {
+  // laag -> { y, height }; gekalibreerd op de layout van dit model.
+  motivation:  { y:  10, h: 700 },
+  strategy:    { y: 710, h: 260 },
+  business:    { y:  10, h: 700 },
+  application: { y:  10, h: 480 },
+  technology:  { y: 490, h: 480 }
+};
+function buildLandscapeBackdrop(view) {
+  const g = el('g', { class: 'landscape-backdrop' });
+  if (!view) return g;
+  // welke lagen toont deze view? gebruik dezelfde include als filterElementsForView.
+  let layers = (view.include && view.include.layers) || null;
+  if (!layers) {
+    const seen = {};
+    filterElementsForView(view).forEach(e2 => { seen[typeLayer(e2.type)] = 1; });
+    layers = Object.keys(seen);
+  }
+  layers.forEach(ln => {
+    const band = LAYER_BANDS[ln];
+    if (!band) return;
+    const fill = LAYER_FILL[ln] || LAYER_FILL.other;
+    const cw = (view.canvas && view.canvas[0]) || 1300;
+    g.appendChild(el('rect', {
+      x: 0, y: band.y, width: cw, height: band.h, fill: fill
+    }));
+    const txt = el('text', {
+      x: cw - 20, y: band.y + 36, 'text-anchor': 'end'
+    });
+    txt.textContent = (LAYER_LABEL[ln] || ln).toUpperCase();
+    g.appendChild(txt);
+  });
+  return g;
+}
+
+/* ============================================================
+ * ELEMENT RENDERING — notatie-specifiek
+ * ============================================================ */
+function renderElement(e) {
+  if (currentNotation === 'dragon1') return renderElementDragon1(e);
+  return renderElementArchiMate(e);
+}
+
+/* ArchiMate-modus: rechte rechthoek + «Type»-banner + icoon-rechtsboven */
+function renderElementArchiMate(e) {
+  const W = ELEM_W, H = ELEM_H;
+  const [x, y] = posOf(e);
+  const layer = typeLayer(e.type);
+  const fill = e.fill || LAYER_FILL[layer] || LAYER_FILL.other;
+  const stroke = e.stroke || LAYER_STROKE[layer] || LAYER_STROKE.other;
+  const g = el('g', { 'data-id': e.id, transform: 'translate(' + x + ',' + y + ')' });
+  // banner-strook bovenaan voor het type
+  const rect = el('rect', {
+    class: 'elem-rect', x: 0, y: 0, width: W, height: H,
+    style: 'fill:' + fill + ';stroke:' + stroke
+  });
+  g.appendChild(rect);
+  // type-banner
+  const banner = el('text', {
+    class: 'elem-type-banner', x: 6, y: 12
+  });
+  banner.textContent = '«' + (TYPE_BANNER[(e.type || '').toLowerCase()] || e.type || '') + '»';
+  g.appendChild(banner);
+  // icoon rechtsboven (16x16)
+  g.appendChild(renderTypeIcon(e.type, W - 22, 4, 16));
+  // label (gewrapt, deterministisch)
+  appendWrappedLabel(g, e, W / 2, 28, 27, 4, 12);
+  appendTooltip(g, e, 'element');
+  return g;
+}
+
+/* ============================================================
+ * HEAT — data-driven kleur-interpolatie (Dragon1-eigen)
+ * Bron: docs/DRAGON1_VISUAL_LANGUAGE.md §3 (data-driven dynamic styling)
+ * Mapping per attribuut:
+ *   criticality, cost  → 0 = groen (laag), 1 = rood (hoog)
+ *   completion         → 0 = rood  (open), 1 = groen (klaar) — geïnverteerd
+ * ============================================================ */
+function heatValue(e, mode) {
+  if (mode === 'off') return null;
+  const v = e[mode];
+  if (typeof v !== 'number') return null;
+  // completion: 1.0 = klaar = groen → inverteer naar "hoeveel rood"
+  return mode === 'completion' ? (1 - v) : v;
+}
+function heatToColor(t) {
+  // t = 0 (groen) → 0.5 (geel) → 1 (rood). Lineaire RGB-interpolatie.
+  if (t == null) return null;
+  t = Math.max(0, Math.min(1, t));
+  const stops = [
+    [34, 197, 94],   // --heat-low  #22c55e
+    [234, 179, 8],   // --heat-mid  #eab308
+    [239, 68, 68]    // --heat-high #ef4444
+  ];
+  const seg = t < 0.5 ? 0 : 1;
+  const localT = seg === 0 ? t * 2 : (t - 0.5) * 2;
+  const a = stops[seg], b = stops[seg + 1];
+  const r = Math.round(a[0] + (b[0] - a[0]) * localT);
+  const g = Math.round(a[1] + (b[1] - a[1]) * localT);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * localT);
+  return 'rgb(' + r + ',' + g + ',' + bl + ')';
+}
+
+/* ============================================================
+ * Dragon1-modus: ovaal-shape per type, data-driven heat-fill,
+ * geen banner, geen icoon-rechtsboven.
+ * Bron: docs/DRAGON1_VISUAL_LANGUAGE.md §1 (ovaal-primitief)
+ * ============================================================ */
+function renderElementDragon1(e) {
+  const W = ELEM_W, H = ELEM_H;
+  const [x, y] = posOf(e);
+  const layer = typeLayer(e.type);
+  const layerFill = e.fill || LAYER_FILL[layer] || LAYER_FILL.other;
+  const stroke = e.stroke || LAYER_STROKE[layer] || LAYER_STROKE.other;
+  const t = (e.type || '').toLowerCase();
+
+  // Heat-fill heeft voorrang op layer-fill (alleen in Dragon1-modus)
+  const heatT = heatValue(e, currentHeat);
+  const heatFill = heatToColor(heatT);
+  const fill = heatFill || layerFill;
+
+  const g = el('g', {
+    'data-id': e.id,
+    'data-criticality': e.criticality != null ? e.criticality : '',
+    'data-completion':  e.completion  != null ? e.completion  : '',
+    'data-cost':        e.cost        != null ? e.cost        : '',
+    transform: 'translate(' + x + ',' + y + ')'
+  });
+
+  const cx = W / 2, cy = H / 2;
+  let shape;
+
+  if (t === 'communicationnetwork' || t === 'path') {
+    // dunne, langwerpige ellips (signaal-kanaal-suggestie)
+    shape = el('ellipse', {
+      class: 'elem-shape',
+      cx: cx, cy: cy, rx: W / 2 - 4, ry: 12,
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8'
+    });
+  } else if (t === 'node' || t === 'device' || t === 'equipment') {
+    // ovaal met depth-shadow (Dragon1's "concept met substantie")
+    shape = el('g');
+    shape.appendChild(el('ellipse', {
+      cx: cx + 6, cy: cy + 6, rx: W / 2 - 6, ry: H / 2 - 4,
+      fill: stroke, opacity: '0.22'
+    }));
+    shape.appendChild(el('ellipse', {
+      class: 'elem-shape',
+      cx: cx, cy: cy, rx: W / 2 - 6, ry: H / 2 - 4,
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8'
+    }));
+  } else if (t === 'businessactor' || t === 'person' || t === 'stakeholder') {
+    // staande ovaal (persoon-suggestie, geen rechthoek)
+    shape = el('ellipse', {
+      class: 'elem-shape',
+      cx: cx, cy: cy, rx: W / 2 - 18, ry: H / 2 - 2,
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8'
+    });
+  } else if (t === 'dataobject' || t === 'businessobject' || t === 'artifact') {
+    // cilinder-look: bovenkant-ellips + romp + onder-ellips
+    shape = el('g');
+    const rx = W / 2 - 8;
+    shape.appendChild(el('path', {
+      d: 'M ' + (cx - rx) + ',' + cy + ' L ' + (cx - rx) + ',' + (cy + H / 2 - 8) +
+         ' A ' + rx + ' 6 0 0 0 ' + (cx + rx) + ',' + (cy + H / 2 - 8) +
+         ' L ' + (cx + rx) + ',' + cy + ' Z',
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8',
+      class: 'elem-shape'
+    }));
+    shape.appendChild(el('ellipse', {
+      cx: cx, cy: cy, rx: rx, ry: 6,
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8'
+    }));
+  } else {
+    // DEFAULT — pure ovaal-concept (Dragon1's primaire primitief)
+    shape = el('ellipse', {
+      class: 'elem-shape',
+      cx: cx, cy: cy, rx: W / 2 - 4, ry: H / 2 - 2,
+      style: 'fill:' + fill + ';stroke:' + stroke + ';stroke-width:1.8'
+    });
+  }
+  g.appendChild(shape);
+
+  // Label centraal (geen banner, geen icoon-rechtsboven)
+  appendWrappedLabel(g, e, cx, 22, 23, 4, 12);
+  appendTooltip(g, e, 'element');
+
+  // Heat-badge rechtsboven (alleen als heat actief én waarde aanwezig)
+  if (heatT != null) {
+    const badge = el('g', { transform: 'translate(' + (W - 14) + ',12)' });
+    badge.appendChild(el('circle', {
+      cx: 0, cy: 0, r: 8,
+      style: 'fill:' + heatFill + ';stroke:#222;stroke-width:0.8'
+    }));
+    const txt = el('text', {
+      x: 0, y: 3, 'text-anchor': 'middle',
+      style: 'font-size:9px;font-weight:600;fill:#fff;pointer-events:none'
+    });
+    txt.textContent = Math.round(heatT * 100);
+    badge.appendChild(txt);
+    g.appendChild(badge);
+  }
+
+  return g;
+}
+
+/* Compacte SVG-icoon per type (16x16). Geen FontAwesome dep. */
+function renderTypeIcon(type, x, y, size) {
+  const t = (type || '').toLowerCase();
+  const g = el('g', { transform: 'translate(' + x + ',' + y + ')' });
+  const stroke = 'var(--c-stroke)';
+  const s = size / 16;
+  let pathD = null;
+  if (t === 'businessactor' || t === 'person')
+    pathD = 'M8 1.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM2 14c0-3 2.7-5 6-5s6 2 6 5v.5H2V14z';
+  else if (t === 'businessrole')
+    pathD = 'M2 4h12v8H2z M2 4l6 4 6-4';
+  else if (t === 'businessservice' || t === 'applicationservice' || t === 'technologyservice')
+    pathD = 'M2 8a6 6 0 0 1 12 0H2z';
+  else if (t === 'businessprocess' || t === 'applicationprocess')
+    pathD = 'M1 5h9l3 3-3 3H1z';
+  else if (t === 'businessobject' || t === 'dataobject' || t === 'artifact')
+    pathD = 'M2 3h12v10H2z';
+  else if (t === 'applicationcomponent' || t === 'component')
+    pathD = 'M3 3h10v10H3z M1 5h2v2H1z M1 9h2v2H1z';
+  else if (t === 'applicationinterface')
+    pathD = 'M3 8a5 5 0 0 1 10 0 M3 8a5 5 0 0 0 10 0';
+  else if (t === 'node' || t === 'device' || t === 'equipment')
+    pathD = 'M2 5h10v8H2z M2 5l3-3h10v8l-3 3';
+  else if (t === 'communicationnetwork')
+    pathD = 'M2 8h12 M4 6v4 M8 6v4 M12 6v4';
+  else if (t === 'systemsoftware')
+    pathD = 'M3 3h10v10H3z M3 6h10 M3 10h10';
+  else if (t === 'driver')
+    pathD = 'M8 2 L13 7 L10 7 L10 14 L6 14 L6 7 L3 7 z';
+  else if (t === 'goal')
+    pathD = 'M8 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z M8 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z';
+  else if (t === 'requirement')
+    pathD = 'M3 2h10v12H3z M5 5h6 M5 8h6 M5 11h4';
+  else if (t === 'stakeholder')
+    pathD = 'M4 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z M12 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z M8 13a4 4 0 0 0-4-3 M8 13a4 4 0 0 1 4-3';
+  else
+    pathD = 'M2 2h12v12H2z';
+  const p = el('path', {
+    d: pathD, transform: 'scale(' + s + ')',
+    fill: 'none', stroke: stroke, 'stroke-width': '1.2'
+  });
+  g.appendChild(p);
+  return g;
+}
+
+/* ============================================================
+ * RELATIE RENDERING
+ * ============================================================ */
+function renderRelation(r) {
+  const W = ELEM_W, H = ELEM_H;
+  const from = elemById(r.from), to = elemById(r.to);
+  if (!from || !to) return el('g');
+  const fp = posOf(from), tp = posOf(to);
+  const [x1, y1] = fp, [x2, y2] = tp;
+  // verbind midpoints
+  const cx1 = x1 + W / 2, cy1 = y1 + H / 2;
+  const cx2 = x2 + W / 2, cy2 = y2 + H / 2;
+  const relType = r.type || inferRelType(from.type, to.type);
+  const style = REL_STYLE[relType] || REL_STYLE.flow;
+  const g = el('g', { 'data-rel-id': r.id });
+  appendTooltip(g, Object.assign({}, r, { type: relType }), 'relation');
+  const line = el('line', {
+    class: 'rel-line' + (style.dash === '5,4' ? ' dashed' : (style.dash === '2,3' ? ' dotted' : '')),
+    x1: cx1, y1: cy1, x2: cx2, y2: cy2,
+    style: r.stroke ? 'stroke:' + r.stroke : ''
+  });
+  if (style.marker === 'arrow') line.setAttribute('marker-end', 'url(#arrow)');
+  else if (style.marker === 'arrow-hollow') line.setAttribute('marker-end', 'url(#arrow-hollow)');
+  if (style.startMarker === 'dot') line.setAttribute('marker-start', 'url(#dot)');
+  else if (style.startMarker === 'diamond') line.setAttribute('marker-start', 'url(#diamond)');
+  g.appendChild(line);
+  // label - identieke labels binnen een view worden maar een keer getekend, en
+  // een kort horizontaal verband krijgt zijn label boven de vakken in plaats van
+  // in de smalle tussenruimte waar het onleesbaar achter een element verdwijnt.
+  if (r.label && LABELS_DRAWN && !LABELS_DRAWN.has(r.label)) {
+    LABELS_DRAWN.add(r.label);
+    const lx = (cx1 + cx2) / 2;
+    const flat = Math.abs(cy2 - cy1) < 8 && Math.abs(cx2 - cx1) < W * 2.2;
+    const ly = flat ? (cy1 - H / 2 - 7) : ((cy1 + cy2) / 2 - 4);
+    const bg = el('rect', {
+      class: 'rel-label-bg',
+      x: lx - r.label.length * 3.2 - 2, y: ly - 9,
+      width: r.label.length * 6.4 + 4, height: 12
+    });
+    g.appendChild(bg);
+    const txt = el('text', {
+      class: 'rel-label', x: lx, y: ly, 'text-anchor': 'middle'
+    });
+    txt.textContent = r.label;
+    g.appendChild(txt);
+  }
+  return g;
+}
+
+/* ============================================================
+ * INFO + LEGENDA
+ * ============================================================ */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function updateInfo(view, nElems, nRels) {
+  const info = document.getElementById('info');
+  info.innerHTML =
+    '<b>' + esc(MODEL.meta.title || 'Untitled') + '</b> &middot; ' +
+    'view: <b>' + esc(view ? view.label : '?') + '</b> &middot; ' +
+    (view && view.description ? esc(view.description) + ' &middot; ' : '') +
+    nElems + ' elementen, ' + nRels + ' relaties &middot; ' +
+    'notatie: <b>' + esc(currentNotation) + '</b>' +
+    (view && view.source
+      ? '<br><span style="color:#777">bron in de repo: ' + esc(view.source) + '</span>'
+      : '') +
+    '<br><span style="color:#777">Beweeg over een element of relatie voor de toelichting ' +
+    'en de bronverwijzing. Alles in dit model is herleidbaar tot de repo; ' +
+    '&lt;&lt;TBD&gt;&gt; markeert wat nergens is vastgelegd.</span>';
+}
+
+function updateLegend(elems) {
+  const lg = document.getElementById('legend');
+  lg.innerHTML = '';
+  const layersInUse = new Set(elems.map(e => typeLayer(e.type)));
+  layersInUse.forEach(l => {
+    const item = document.createElement('span');
+    item.className = 'item';
+    item.innerHTML =
+      '<span class="sw" style="background:' + LAYER_FILL[l] + ';border-color:' + LAYER_STROKE[l] + '"></span>' +
+      (LAYER_LABEL[l] || l);
+    lg.appendChild(item);
+  });
+}
+
+/* ============================================================
+ * ANIMATIE — Transacties + Journeys
+ * RAF-loop, deterministisch t.o.v. step-volgorde.
+ * ============================================================ */
+function startAnimation() {
+  const s = scenarioById(animState.scenarioId);
+  if (!s) return;
+  animState.playing = true;
+  animState.lastTickAt = performance.now();
+  if (!animState.tokenEl) {
+    animState.tokenEl = el('circle', { class: 'anim-token', r: 7, cx: 0, cy: 0 });
+    document.getElementById('animation-layer').appendChild(animState.tokenEl);
+  }
+  tickAnimation();
+}
+function stopAnimation() {
+  animState.playing = false;
+  if (animState.rafHandle) cancelAnimationFrame(animState.rafHandle);
+  if (animState.tokenEl && animState.tokenEl.parentNode) {
+    animState.tokenEl.parentNode.removeChild(animState.tokenEl);
+  }
+  animState.tokenEl = null;
+}
+function tickAnimation() {
+  if (!animState.playing) return;
+  const s = scenarioById(animState.scenarioId);
+  if (!s || !s.steps.length) return;
+  const now = performance.now();
+  const elapsed = now - animState.lastTickAt;
+  const t = Math.min(1, elapsed / animState.speedMs);
+  const step = s.steps[animState.stepIdx];
+  const r = relById(step.rel);
+  if (r) {
+    const from = elemById(r.from), to = elemById(r.to);
+    if (from && to) {
+      const W = ELEM_W, H = ELEM_H;
+      const fp = posOf(from), tp = posOf(to);
+      const cx1 = fp[0] + W / 2, cy1 = fp[1] + H / 2;
+      const cx2 = tp[0] + W / 2, cy2 = tp[1] + H / 2;
+      const x = cx1 + (cx2 - cx1) * t;
+      const y = cy1 + (cy2 - cy1) * t;
+      if (animState.tokenEl) {
+        animState.tokenEl.setAttribute('cx', x);
+        animState.tokenEl.setAttribute('cy', y);
+      }
+      log('Step ' + (animState.stepIdx + 1) + '/' + s.steps.length + ': ' + (step.narrative || r.id));
+    }
+  }
+  if (t >= 1) {
+    animState.stepIdx++;
+    animState.lastTickAt = now;
+    if (animState.stepIdx >= s.steps.length) {
+      if (animState.loop) {
+        animState.stepIdx = 0;
+      } else {
+        animState.playing = false;
+        return;
+      }
+    }
+  }
+  animState.rafHandle = requestAnimationFrame(tickAnimation);
+}
+function stepAnimation() {
+  const s = scenarioById(animState.scenarioId);
+  if (!s) return;
+  animState.stepIdx = (animState.stepIdx + 1) % s.steps.length;
+  if (!animState.tokenEl) {
+    animState.tokenEl = el('circle', { class: 'anim-token', r: 7, cx: 0, cy: 0 });
+    document.getElementById('animation-layer').appendChild(animState.tokenEl);
+  }
+  const step = s.steps[animState.stepIdx];
+  const r = relById(step.rel);
+  if (r) {
+    const from = elemById(r.from), to = elemById(r.to);
+    if (from && to) {
+      const W = ELEM_W, H = ELEM_H;
+      const tp = posOf(to);
+      const cx2 = tp[0] + W / 2, cy2 = tp[1] + H / 2;
+      animState.tokenEl.setAttribute('cx', cx2);
+      animState.tokenEl.setAttribute('cy', cy2);
+      log('Step ' + (animState.stepIdx + 1) + '/' + s.steps.length + ': ' + (step.narrative || r.id));
+    }
+  }
+}
+
+/* ============================================================
+ * DSL PARSER — ArchDSL DSL-B subset, Dragon1-compatibel.
+ *   Element:   PascalType id "Label" { -attrs }
+ *   Relatie:   from -> to "label" { -attrs }      (NOOIT :type — engine infereert)
+ *   Viewpoint: Viewpoint id "Label" { -description ... -attr k = v }
+ *   Slide:     Slide id "Label" { -attr step_NN = "relId :: narratief" }
+ *   Overig:    set / pos
+ * Attribuutsleutels blijven beperkt tot de gedeelde set:
+ *   -fill -stroke -color -icon -description -attr k = v
+ * ============================================================ */
+function parseDSL(text) {
+  const m = {
+    meta: { title: '', subtitle: '', language: 'archimate' },
+    elements: [], relations: [], views: [], scenarios: []
+  };
+  const lines = String(text).split(/\r?\n/);
+  let i = 0, relIdx = 0;
+
+  /* Leest een `{ ... }`-body, zowel op één regel als meerregelig. */
+  function readBody(firstLine, startIdx) {
+    const open = firstLine.indexOf('{');
+    if (open === -1) return ['', startIdx + 1];
+    const close = firstLine.lastIndexOf('}');
+    if (close > open) return [firstLine.slice(open + 1, close), startIdx + 1];
+    let body = firstLine.slice(open + 1) + ' ';
+    let j = startIdx + 1;
+    while (j < lines.length) {
+      if (/^\s*\}/.test(lines[j])) { j++; break; }
+      body += lines[j] + ' ';
+      j++;
+    }
+    return [body, j];
+  }
+
+  function attrParse(body, target) {
+    target.attrs = target.attrs || {};
+    const reAttr = /-attr\s+([\w.]+)\s*=\s*(?:"([^"]*)"|(\S+))/g;
+    let mm;
+    while ((mm = reAttr.exec(body)) !== null) {
+      target.attrs[mm[1]] = mm[2] !== undefined ? mm[2] : mm[3];
+    }
+    const rest = body.replace(/-attr\s+[\w.]+\s*=\s*(?:"[^"]*"|\S+)/g, ' ');
+    const re = /-(\w+)\s+(?:=\s*)?(?:"([^"]*)"|([^\s"]+))/g;
+    while ((mm = re.exec(rest)) !== null) {
+      const k = mm[1], v = mm[2] !== undefined ? mm[2] : mm[3];
+      if (k === 'fill') target.fill = v;
+      else if (k === 'stroke') target.stroke = v;
+      else if (k === 'color') target.color = v;
+      else if (k === 'icon') target.icon = v;
+      else if (k === 'description') target.description = v;
+    }
+    return target;
+  }
+
+  while (i < lines.length) {
+    const rawLine = lines[i];
+    const line = rawLine.replace(/(?:^|\s)(?:#|\/\/).*$/, '').trim();
+    if (!line) { i++; continue; }
+
+    let mm = line.match(/^set\s+(language|title|subtitle|purpose)\s+(.+)$/i);
+    if (mm) { m.meta[mm[1].toLowerCase()] = mm[2].replace(/^"|"$/g, ''); i++; continue; }
+
+    mm = line.match(/^pos\s+(\w[\w.-]*)\s+(-?\d+)\s*,\s*(-?\d+)\s*$/);
+    if (mm) {
+      const t = m.elements.find(x => x.id === mm[1]);
+      if (t) t.pos = [parseInt(mm[2], 10), parseInt(mm[3], 10)];
+      i++; continue;
+    }
+
+    mm = line.match(/^Viewpoint\s+(\w[\w.-]*)\s+"([^"]+)"/);
+    if (mm) {
+      const v = { id: mm[1], label: mm[2], description: '', include: {}, layout: {} };
+      const rb = readBody(line, i); i = rb[1];
+      const box = attrParse(rb[0], {});
+      if (box.description) v.description = box.description;
+      const a = box.attrs || {};
+      if (a.src) v.source = a.src;
+      if (a.canvas) v.canvas = a.canvas.split(',').map(n => parseInt(n, 10));
+      if (a.elements) v.include.elements = a.elements.split(',').filter(Boolean);
+      if (a.layout) {
+        a.layout.split('|').filter(Boolean).forEach(part => {
+          const p = part.split(':');
+          if (p.length === 2) {
+            const xy = p[1].split(',').map(n => parseInt(n, 10));
+            v.layout[p[0]] = xy;
+          }
+        });
+      }
+      if (a.scenarios) v.scenarios = a.scenarios.split(',').filter(Boolean);
+      if (a.scenario_default) v.scenario = a.scenario_default;
+      m.views.push(v); continue;
+    }
+
+    mm = line.match(/^Slide\s+(\w[\w.-]*)\s+"([^"]+)"/);
+    if (mm) {
+      const s = { id: mm[1], label: mm[2], steps: [] };
+      const rb = readBody(line, i); i = rb[1];
+      const box = attrParse(rb[0], {});
+      if (box.description) s.description = box.description;
+      const a = box.attrs || {};
+      if (a.src) s.source = a.src;
+      if (a.view) s.view = a.view;
+      Object.keys(a).filter(k => /^step_\d+$/.test(k)).sort().forEach(k => {
+        const val = a[k];
+        const idx = val.indexOf('::');
+        if (idx === -1) s.steps.push({ rel: val.trim() });
+        else s.steps.push({ rel: val.slice(0, idx).trim(), narrative: val.slice(idx + 2).trim() });
+      });
+      m.scenarios.push(s); continue;
+    }
+
+    mm = line.match(/^(\w[\w.-]*)\s*->\s*(\w[\w.-]*)\s*(?:"([^"]*)")?\s*(\{.*\})?\s*$/);
+    if (mm) {
+      relIdx++;
+      const rel = { id: 'r' + String(relIdx).padStart(3, '0'), from: mm[1], to: mm[2] };
+      if (mm[3]) rel.label = mm[3];
+      if (mm[4]) {
+        attrParse(mm[4], rel);
+        if (rel.attrs && rel.attrs.id) rel.id = rel.attrs.id;
+        if (rel.attrs && rel.attrs.src) rel.src = rel.attrs.src;
+        delete rel.attrs;
+      }
+      m.relations.push(rel); i++; continue;
+    }
+
+    mm = line.match(/^([A-Z]\w+)\s+(\w[\w.-]*)\s+"([^"]*)"/);
+    if (mm) {
+      const elx = { id: mm[2], type: mm[1], label: mm[3], pos: [0, 0] };
+      if (line.indexOf('{') !== -1) {
+        const rb = readBody(line, i); i = rb[1];
+        attrParse(rb[0], elx);
+        if (elx.attrs && elx.attrs.src) elx.src = elx.attrs.src;
+        delete elx.attrs;
+      } else { i++; }
+      m.elements.push(elx); continue;
+    }
+
+    i++;
+  }
+
+  /* auto-layout voor elementen zonder pos */
+  let autoX = 30, autoY = 24;
+  m.elements.forEach(e2 => {
+    if (!e2.pos || (e2.pos[0] === 0 && e2.pos[1] === 0)) {
+      e2.pos = [autoX, autoY]; autoX += 192;
+      if (autoX > 1400) { autoX = 30; autoY += 118; }
+    }
+  });
+  if (m.views.length === 0) {
+    m.views = [
+      { id: 'conceptueel', label: 'Conceptueel', include: { layers: ['motivation', 'strategy'] } },
+      { id: 'logisch', label: 'Logisch', include: { layers: ['business', 'application'] } },
+      { id: 'fysiek', label: 'Fysiek', include: { layers: ['technology'] } }
+    ];
+  }
+  return m;
+}
+
+/* ============================================================
+ * DSL SERIALIZER — DSL-B, Dragon1-compatibel.
+ * Strict PascalCase types, GEEN :type op relaties, alleen gedeelde attr-keys.
+ * ============================================================ */
+function dslStr(s) {
+  return String(s == null ? '' : s).replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
+}
+function modelToDSL(m) {
+  const out = [];
+  out.push('# ' + dslStr(m.meta.title || 'Model') + ' — ArchDSL (DSL-B), Dragon1-compatible.');
+  out.push('# Types are strict PascalCase. Relations carry no :type — the engine infers it from');
+  out.push('# the endpoint types. Only the shared attribute keys are used:');
+  out.push('#   -fill  -stroke  -color  -icon  -description  -attr key = value');
+  out.push('# Top-level keywords: set / pos / Viewpoint / Slide only.');
+  if (m.meta.generated_from) out.push('# Sources: ' + dslStr(m.meta.generated_from));
+  out.push('');
+  if (m.meta.language) out.push('set language ' + dslStr(m.meta.language));
+  if (m.meta.title) out.push('set title "' + dslStr(m.meta.title) + '"');
+  if (m.meta.subtitle) out.push('set subtitle "' + dslStr(m.meta.subtitle) + '"');
+  out.push('');
+  out.push('# ---------------------------------------------------------------- elements');
+  m.elements.forEach(e2 => {
+    const a = [];
+    if (e2.fill) a.push('-fill "' + dslStr(e2.fill) + '"');
+    if (e2.stroke) a.push('-stroke "' + dslStr(e2.stroke) + '"');
+    if (e2.color) a.push('-color "' + dslStr(e2.color) + '"');
+    if (e2.icon) a.push('-icon "' + dslStr(e2.icon) + '"');
+    if (e2.description) a.push('-description "' + dslStr(e2.description) + '"');
+    if (e2.src) a.push('-attr src = "' + dslStr(e2.src) + '"');
+    let line = e2.type + ' ' + e2.id + ' "' + dslStr(e2.label) + '"';
+    if (a.length) line += ' { ' + a.join(' ') + ' }';
+    out.push(line);
+  });
+  out.push('');
+  out.push('# -------------------------------------------------------------- relations');
+  m.relations.forEach(rl => {
+    const a = ['-attr id = "' + dslStr(rl.id) + '"'];
+    if (rl.src) a.push('-attr src = "' + dslStr(rl.src) + '"');
+    if (rl.stroke) a.push('-stroke "' + dslStr(rl.stroke) + '"');
+    if (rl.description) a.push('-description "' + dslStr(rl.description) + '"');
+    let line = rl.from + ' -> ' + rl.to;
+    if (rl.label) line += ' "' + dslStr(rl.label) + '"';
+    line += ' { ' + a.join(' ') + ' }';
+    out.push(line);
+  });
+  out.push('');
+  out.push('# ------------------------------------------------------------- viewpoints');
+  (m.views || []).forEach(v => {
+    out.push('Viewpoint ' + v.id + ' "' + dslStr(v.label) + '" {');
+    if (v.description) out.push('  -description "' + dslStr(v.description) + '"');
+    if (v.source) out.push('  -attr src = "' + dslStr(v.source) + '"');
+    if (v.canvas) out.push('  -attr canvas = "' + v.canvas[0] + ',' + v.canvas[1] + '"');
+    if (v.scenarios && v.scenarios.length)
+      out.push('  -attr scenarios = "' + v.scenarios.join(',') + '"');
+    if (v.scenario) out.push('  -attr scenario_default = "' + v.scenario + '"');
+    if (v.include && v.include.elements)
+      out.push('  -attr elements = "' + v.include.elements.join(',') + '"');
+    if (v.layout && Object.keys(v.layout).length) {
+      const parts = Object.keys(v.layout).map(k => k + ':' + v.layout[k][0] + ',' + v.layout[k][1]);
+      out.push('  -attr layout = "' + parts.join('|') + '"');
+    }
+    out.push('}');
+  });
+  out.push('');
+  out.push('# ------------------------------------------------- scenarios (animation)');
+  (m.scenarios || []).forEach(s => {
+    out.push('Slide ' + s.id + ' "' + dslStr(s.label) + '" {');
+    if (s.description) out.push('  -description "' + dslStr(s.description) + '"');
+    if (s.source) out.push('  -attr src = "' + dslStr(s.source) + '"');
+    (s.steps || []).forEach((st, ix) => {
+      out.push('  -attr step_' + String(ix + 1).padStart(2, '0') +
+               ' = "' + dslStr(st.rel) + ' :: ' + dslStr(st.narrative || '') + '"');
+    });
+    out.push('}');
+  });
+  out.push('');
+  out.push('# -------------------------------------------------------------- positions');
+  m.elements.forEach(e2 => {
+    if (e2.pos) out.push('pos ' + e2.id + ' ' + e2.pos[0] + ', ' + e2.pos[1]);
+  });
+  out.push('');
+  return out.join('\n');
+}
+
+/* ============================================================
+ * .archimate placeholder — Archi v5 XML schrijver (minimum)
+ * ============================================================ */
+function modelToArchimate(m) {
+  // Minimal Archi v5 archimate-model XML.
+  const xmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                              .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ';
+  xml += 'xmlns:archimate="http://www.archimatetool.com/archimate" name="' + xmlEsc(m.meta.title || 'Model') + '">\n';
+  const folders = {
+    motivation: 'motivation', strategy: 'strategy', business: 'business',
+    application: 'application', technology: 'technology',
+    impl: 'implementation_migration', risk: 'other', other: 'other'
+  };
+  const byFolder = {};
+  m.elements.forEach(e => {
+    const f = folders[typeLayer(e.type)] || 'other';
+    (byFolder[f] = byFolder[f] || []).push(e);
+  });
+  Object.keys(byFolder).forEach(folderName => {
+    xml += '  <folder name="' + folderName + '" type="' + folderName + '">\n';
+    byFolder[folderName].forEach(e => {
+      xml += '    <element xsi:type="archimate:' + (TYPE_BANNER[(e.type || '').toLowerCase()] || e.type) +
+             '" name="' + xmlEsc(e.label) + '" id="' + xmlEsc(e.id) + '"/>\n';
+    });
+    xml += '  </folder>\n';
+  });
+  xml += '  <folder name="Relations" type="relations">\n';
+  m.relations.forEach(r => {
+    const from = elemById(r.from), to = elemById(r.to);
+    const type = r.type || inferRelType(from && from.type, to && to.type);
+    xml += '    <element xsi:type="archimate:' + type.charAt(0).toUpperCase() + type.slice(1) +
+           'Relationship" id="' + r.id + '" source="' + r.from + '" target="' + r.to + '"';
+    if (r.label) xml += ' name="' + xmlEsc(r.label) + '"';
+    xml += '/>\n';
+  });
+  xml += '  </folder>\n';
+  xml += '</archimate:model>\n';
+  return xml;
+}
+
+/* ============================================================
+ * IO — download / file-read helpers
+ * ============================================================ */
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+function readFile(input, cb) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = e => cb(e.target.result, f.name);
+  rd.readAsText(f);
+}
+
+/* ============================================================
+ * INIT + WIRING
+ * ============================================================ */
+function populateViewSelect() {
+  const sel = document.getElementById('viewSelect');
+  sel.innerHTML = '';
+  MODEL.views.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.id; o.textContent = v.label;
+    sel.appendChild(o);
+  });
+  sel.value = currentViewId;
+}
+
+function init() {
+  document.getElementById('viewer-title').textContent = MODEL.meta.title || 'Architectuur Viewer';
+  populateViewSelect();
+  render();
+
+  // view select
+  document.getElementById('viewSelect').addEventListener('change', e => {
+    currentViewId = e.target.value;
+    stopAnimation();
+    clearLog();
+    render();
+  });
+
+  // notation toggle
+  document.querySelectorAll('#notationToggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#notationToggle button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      currentNotation = b.dataset.notation;
+      // Heat-dropdown + sketch-knop alleen actief in Dragon1-modus.
+      // Bij switch naar Dragon1: standaard 'criticality' aan om verschil direct zichtbaar te maken.
+      // Bij switch naar ArchiMate: heat + sketch terug naar uit (statische laag-kleur, geen filter).
+      const heatSel = document.getElementById('heatSelect');
+      const sketchBtn = document.getElementById('btnSketch');
+      if (currentNotation === 'dragon1') {
+        heatSel.disabled = false;
+        sketchBtn.disabled = false;
+        if (currentHeat === 'off') {
+          currentHeat = 'criticality';
+          heatSel.value = 'criticality';
+        }
+      } else {
+        heatSel.disabled = true;
+        sketchBtn.disabled = true;
+        currentHeat = 'off';
+        heatSel.value = 'off';
+        currentRenderMode = 'blueprint';
+        sketchBtn.classList.remove('active');
+      }
+      render();
+    });
+  });
+
+  // heat dropdown
+  document.getElementById('heatSelect').addEventListener('change', e => {
+    currentHeat = e.target.value;
+    render();
+  });
+
+  // sketch toggle (Dragon1-only)
+  document.getElementById('btnSketch').addEventListener('click', e => {
+    if (e.target.disabled) return;
+    currentRenderMode = (currentRenderMode === 'sketch') ? 'blueprint' : 'sketch';
+    e.target.classList.toggle('active', currentRenderMode === 'sketch');
+    render();
+  });
+
+  // anim controls
+  document.getElementById('btnPlay').addEventListener('click', () => {
+    if (!animState.playing) startAnimation();
+  });
+  document.getElementById('btnPause').addEventListener('click', () => {
+    animState.playing = false;
+    if (animState.rafHandle) cancelAnimationFrame(animState.rafHandle);
+  });
+  document.getElementById('btnStep').addEventListener('click', stepAnimation);
+  document.getElementById('scenarioSelect').addEventListener('change', e => {
+    stopAnimation();
+    animState.scenarioId = e.target.value;
+    animState.stepIdx = 0;
+    clearLog();
+    render();
+  });
+  document.getElementById('btnLoop').addEventListener('click', e => {
+    animState.loop = !animState.loop;
+    e.target.classList.toggle('active', animState.loop);
+  });
+  document.getElementById('speedSlider').addEventListener('input', e => {
+    animState.speedMs = parseInt(e.target.value, 10);
+  });
+
+  // exports
+  document.getElementById('btnExportJson').addEventListener('click', () => {
+    download('MiraiCastLab_model.json', JSON.stringify(MODEL, null, 2), 'application/json');
+  });
+  document.getElementById('btnExportDsl').addEventListener('click', () => {
+    download('MiraiCastLab_archdsl.dsl', modelToDSL(MODEL), 'text/plain');
+  });
+  document.getElementById('btnExportArchimate').addEventListener('click', () => {
+    download('MiraiCastLab.archimate', modelToArchimate(MODEL), 'application/xml');
+  });
+  document.getElementById('btnExportSvg').addEventListener('click', () => {
+    const svg = document.getElementById('canvas');
+    const data = '<?xml version="1.0" encoding="UTF-8"?>\n' + svg.outerHTML;
+    download('MiraiCastLab_' + currentViewId + '_' + currentNotation + '.svg', data, 'image/svg+xml');
+  });
+
+  // imports
+  document.getElementById('impJson').addEventListener('change', e => {
+    readFile(e.target, txt => {
+      try { MODEL = JSON.parse(txt); afterImport(); }
+      catch (err) { log('JSON import-fout: ' + err.message); }
+    });
+  });
+  document.getElementById('impDsl').addEventListener('change', e => {
+    readFile(e.target, txt => {
+      try { MODEL = parseDSL(txt); afterImport(); }
+      catch (err) { log('DSL parse-fout: ' + err.message); }
+    });
+  });
+  document.getElementById('impArchimate').addEventListener('change', e => {
+    log('.archimate-import: nog niet geïmplementeerd (placeholder). Gebruik .dsl of .json voor nu.');
+  });
+
+  // reset
+  document.getElementById('btnReset').addEventListener('click', () => {
+    MODEL = clone(DEFAULT_MODEL);
+    currentViewId = MODEL.views[0].id;
+    afterImport();
+  });
+}
+
+function afterImport() {
+  currentViewId = (MODEL.views && MODEL.views[0] && MODEL.views[0].id) || 'conceptueel';
+  document.getElementById('viewer-title').textContent = MODEL.meta.title || 'Architectuur Viewer';
+  populateViewSelect();
+  clearLog();
+  render();
+}
+
+init();
+</script>
+
+</body>
+</html>
