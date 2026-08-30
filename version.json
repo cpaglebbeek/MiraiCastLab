@@ -1,11 +1,11 @@
 {
   "project": "MiraiCastLab",
-  "version": "0.1.1",
-  "versionCode": 2,
+  "version": "0.2.0",
+  "versionCode": 3,
   "buildName": "Mirai",
-  "releaseName": "Mirai-2",
+  "releaseName": "Mirai-3",
   "codenameTheme": "Wireless display and projection pioneers, numbered per release",
   "date": "2026-08-30",
   "stable": false,
-  "notes": "Internal-quality release. SceneRenderer palette split into themed chrome and fixed calibration constants; the MotionEvent/KeyEvent device-identity block extracted to one baseEvent(). No behaviour change intended. All vehicle-side findings remain NOT TESTED."
+  "notes": "Research question v0.2: routes A-D. Can an app direct content onto the display Samsung already established, without implementing Miracast? Display-role verdict, setLaunchDisplayId and Presentation measured independently, launching another app, and the capability x privilege-tier matrix. All findings still NOT TESTED."
 }

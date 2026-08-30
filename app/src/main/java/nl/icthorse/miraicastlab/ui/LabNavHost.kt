@@ -13,6 +13,7 @@ import nl.icthorse.miraicastlab.input.InputTestScreen
 import nl.icthorse.miraicastlab.net.NetworkTestScreen
 import nl.icthorse.miraicastlab.projection.MediaProjectionScreen
 import nl.icthorse.miraicastlab.report.LogViewerScreen
+import nl.icthorse.miraicastlab.route.RouteScreen
 import nl.icthorse.miraicastlab.report.ReportScreen
 import nl.icthorse.miraicastlab.samsung.DexScreen
 import nl.icthorse.miraicastlab.samsung.MiracastWizardScreen
@@ -35,6 +36,7 @@ object Dest {
     const val SCENE = "scene"
     const val REPORT = "report"
     const val LOG = "log"
+    const val ROUTES = "routes"
 }
 
 @Composable
@@ -56,5 +58,6 @@ fun LabNavHost(nav: NavHostController = rememberNavController()) {
         composable(Dest.SCENE) { TestPatternScreen(onBack = back) }
         composable(Dest.REPORT) { ReportScreen(onBack = back) }
         composable(Dest.LOG) { LogViewerScreen(onBack = back) }
+        composable(Dest.ROUTES) { RouteScreen(onBack = back) }
     }
 }

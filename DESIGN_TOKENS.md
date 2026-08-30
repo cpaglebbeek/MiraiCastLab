@@ -19,8 +19,12 @@ Source of truth: `app/src/main/java/nl/icthorse/miraicastlab/ui/LabTheme.kt` (to
 | `LabColors.Accent` | `#00E5A0` | primary buttons, active state, scene chrome |
 | `LabColors.AccentDim` | `#0A8F66` | primary in the light scheme |
 
-Dark by default and dark-first: the light scheme exists for bench work, but every layout is
-designed against the dark palette.
+**Dark, always.** Not a preference: every colour here was chosen against the dark ground, and the
+accent in particular falls to unreadable contrast on white. Light-mode rendering was checked on an
+emulator on 2026-08-30 and is measurably worse to read — for an instrument held at arm's length in a
+car that is a defect, not a taste question. `LabTheme(dark = false)` still exists as a parameter, and
+nothing calls it. An earlier version of this file claimed the light scheme was for bench work; that
+was written before anyone had looked at it.
 
 ## 2. Colour — evidence grades
 
@@ -113,8 +117,8 @@ Using these is what makes ten independently written modules look like one app.
 
 ## 7. Not yet configurable at runtime
 
-The app has **no in-app appearance settings**. Light/dark follows the system; text size and contrast
-are not adjustable in the app.
+The app has **no in-app appearance settings**. The theme is fixed dark (see §1); text size and
+contrast are not adjustable in the app.
 
 For a lab instrument read in a vehicle this is a real limitation, not a neutral choice, and it is
 recorded here as a known gap rather than left implicit. Tracked as P3 in the sanitycheck.

@@ -1,6 +1,5 @@
 package nl.icthorse.miraicastlab.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -70,9 +69,19 @@ private val LabTypography = Typography(
 /** Monospaced style for evidence values, coordinates and timestamps. */
 val LabMono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp)
 
+/**
+ * The lab UI is dark, regardless of the system setting.
+ *
+ * Not a style preference: every colour here was chosen against the dark ground, and several - the
+ * accent used for monospaced chains and headings above all - fall to unreadable contrast on white.
+ * Rendering light-mode was checked on an emulator on 2026-08-30 and it is measurably worse to read,
+ * which for an instrument held at arm's length in a car is a defect, not a taste question.
+ *
+ * [dark] stays a parameter so a caller can force the light scheme deliberately, but nothing does.
+ */
 @Composable
 fun LabTheme(
-    dark: Boolean = isSystemInDarkTheme(),
+    dark: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     // The lab UI is dark regardless of system setting when the tester is in a vehicle; we still

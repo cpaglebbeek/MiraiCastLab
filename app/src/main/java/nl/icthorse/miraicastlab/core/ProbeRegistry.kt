@@ -9,6 +9,7 @@ import nl.icthorse.miraicastlab.input.InputDeviceProbe
 import nl.icthorse.miraicastlab.net.ConnectivityProbe
 import nl.icthorse.miraicastlab.net.WifiP2pProbe
 import nl.icthorse.miraicastlab.projection.ProjectionCapabilityProbe
+import nl.icthorse.miraicastlab.route.RouteProbe
 import nl.icthorse.miraicastlab.samsung.DexProbe
 import nl.icthorse.miraicastlab.samsung.SmartViewProbe
 import nl.icthorse.miraicastlab.scan.CodecProbe
@@ -35,6 +36,7 @@ object ProbeRegistry {
         SmartViewProbe,
         DexProbe,
         AndroidAutoProbe,
+        RouteProbe,
     )
 
     fun byId(id: String): Probe? = all.firstOrNull { it.id == id }
