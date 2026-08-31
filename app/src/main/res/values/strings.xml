@@ -4,4 +4,7 @@
     <string name="projection_channel_name">Screen capture experiment</string>
     <string name="projection_notification_title">MiraiCast Lab is capturing the screen</string>
     <string name="projection_notification_text">MediaProjection experiment running. Stop it from the app.</string>
+    <string name="dex_control_title">DeX control</string>
+    <string name="accessibility_summary">Lets MiraiCast Lab measure whether it can send keys and gestures to DeX</string>
+    <string name="accessibility_description">MiraiCast Lab uses this only to test whether an app can drive a Samsung DeX desktop with emulated keyboard and mouse input. It is off unless you enable it, it does not read screen content, and it sends nothing anywhere - the app has no internet permission. Turn it off when you are done testing.</string>
 </resources>

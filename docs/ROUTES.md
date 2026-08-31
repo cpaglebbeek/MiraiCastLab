@@ -197,3 +197,60 @@ circumvented. No interlock bypass, no CAN injection, no vehicle-state spoofing. 
 
 After a session, replace each `NOT TESTED` with what the exported report says, plus the `testRunId`
 and the date. Never from memory, and never upgrade a `NOT TESTED` because a test was skipped.
+
+---
+
+## Driving the desktop: keyboard, mouse and the hotkey flow (v0.3.0)
+
+The premise is correct and was never in doubt: a DeX desktop **is** driven by an external keyboard
+and mouse, and it **does** have the flow *press Meta → type an app name → press Enter*. The question
+the app answers is narrower — **can this app be that keyboard?**
+
+### The headline is a negative, and it is the finding
+
+**The hotkey flow is not reachable at ordinary-app tier.** Not partially: step 1 has no route at all.
+
+| Step | Why |
+|---|---|
+| 1. press Meta | **No accessibility API originates key events.** `FLAG_REQUEST_FILTER_KEY_EVENTS` *filters* keys that already exist; it does not create them. `InputManager.injectInputEvent` needs `INJECT_EVENTS`, which is signature-level. |
+| 2. type the app name | Needs `ACTION_SET_TEXT` on a focused node in **another** app, which needs window-content retrieval — which this app deliberately does not request. |
+| 3. press Enter | Same as step 1. |
+
+`InputRoutes.runFlow` reports the three steps **separately** and stops at the first non-OBSERVED
+step, marking the rest `NOT_TESTED` — *skipped is not failed*. A combined verdict would have hidden
+which step actually blocks.
+
+### What each route really does
+
+| Route | Tier | Reality |
+|---|---|---|
+| `Instrumentation` | ordinary app | delivers into **our own windows only**; a clean return proves the mechanism, not DeX |
+| `InputManager` reflection | root | **looked up, never invoked.** Reports whether the method exists and the protection level of `INJECT_EVENTS` — so the report can name the permission that carries the verdict |
+| Accessibility | ordinary app, user-enabled | **taps and gestures genuinely work.** Keys: only the four with an exact global-action equivalent (BACK, HOME, RECENTS, NOTIFICATIONS); Meta, Ctrl+Esc, Tab, Enter and Escape are **refused rather than faked**. Text: `NOT_TESTED`, by choice |
+| Bluetooth HID | ordinary app | real HID reports to a **paired host** — but a phone is not a HID host to itself, so it cannot drive the DeX desktop on the same phone |
+| adb / Shizuku | adb shell | the exact command, for a workstation. Nothing is executed |
+
+### The route that does reach the goal
+
+`Intent` + `ActivityOptions.setLaunchDisplayId` — ordinary-app tier, no emulation. `OPEN YOUTUBE`,
+`SEARCH ON YOUTUBE` and `OPEN, THEN SEARCH` do exactly what was asked, on the chosen display, and
+report each step as its own outcome. YouTube search prefers the documented in-app `ACTION_SEARCH`
+intent and falls back to the results URL.
+
+The app holds **no `INTERNET` permission**: it hands a URL to another app, it never fetches anything.
+
+### Verified on an emulator, 2026-08-31
+
+The accessibility service binds and the platform confirms the narrow profile that was asked for:
+
+```
+dex.accessibility.connected [CONFIRMED]
+  canPerformGestures=true  canRetrieveWindowContent=false
+  canRequestFilterKeyEvents=false  armed=false
+```
+
+Enabled in Settings, bound by the system, **and still disarmed** — the second gate holds.
+
+What remains `NOT_TESTED`: whether `dispatchGesture` is accepted on an external display id
+(`GestureDescription.Builder.setDisplayId`, API 30+), whether `performGlobalAction` affects the DeX
+display or only the focused one, and everything involving the Mirai.

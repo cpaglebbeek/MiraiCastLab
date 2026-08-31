@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import nl.icthorse.miraicastlab.audio.AudioTestScreen
 import nl.icthorse.miraicastlab.auto.AndroidAutoScreen
 import nl.icthorse.miraicastlab.auto.MotionStateScreen
+import nl.icthorse.miraicastlab.dex.DexControlScreen
 import nl.icthorse.miraicastlab.display.DisplayTestScreen
 import nl.icthorse.miraicastlab.input.InputTestScreen
 import nl.icthorse.miraicastlab.net.NetworkTestScreen
@@ -37,6 +38,7 @@ object Dest {
     const val REPORT = "report"
     const val LOG = "log"
     const val ROUTES = "routes"
+    const val DEX_CONTROL = "dex_control"
 }
 
 @Composable
@@ -59,5 +61,6 @@ fun LabNavHost(nav: NavHostController = rememberNavController()) {
         composable(Dest.REPORT) { ReportScreen(onBack = back) }
         composable(Dest.LOG) { LogViewerScreen(onBack = back) }
         composable(Dest.ROUTES) { RouteScreen(onBack = back) }
+        composable(Dest.DEX_CONTROL) { DexControlScreen(onBack = back) }
     }
 }

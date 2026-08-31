@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Deliberately the narrowest configuration that still allows gesture dispatch and key injection.
+
+  accessibilityEventTypes is set to typeWindowStateChanged ONLY. This service does not need to
+  observe what the user reads or types, and asking for less is the difference between an instrument
+  and a keylogger. canRetrieveWindowContent is false for the same reason: dispatchGesture and
+  key events do not require it.
+
+  The service does nothing until the tester enables it in Settings, and nothing at all unless the
+  app explicitly arms it. See dex/LabAccessibilityService.kt and SAFETY.md.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="false"
+    android:notificationTimeout="100"
+    android:description="@string/accessibility_description"
+    android:summary="@string/accessibility_summary" />

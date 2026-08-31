@@ -1,11 +1,11 @@
 {
   "project": "MiraiCastLab",
-  "version": "0.2.0",
-  "versionCode": 3,
+  "version": "0.3.0",
+  "versionCode": 4,
   "buildName": "Mirai",
-  "releaseName": "Mirai-3",
+  "releaseName": "Mirai-4",
   "codenameTheme": "Wireless display and projection pioneers, numbered per release",
   "date": "2026-08-30",
   "stable": false,
-  "notes": "Research question v0.2: routes A-D. Can an app direct content onto the display Samsung already established, without implementing Miracast? Display-role verdict, setLaunchDisplayId and Presentation measured independently, launching another app, and the capability x privilege-tier matrix. All findings still NOT TESTED."
+  "notes": "DeX control. Tiered measurement of whether an app can be the keyboard and mouse of a DeX desktop (Instrumentation, accessibility, Bluetooth HID, adb - analysed), the hotkey app-launch flow reported per step, and the Intent route that actually reaches YouTube on a chosen display. Headline finding is a negative and is presented as one."
 }

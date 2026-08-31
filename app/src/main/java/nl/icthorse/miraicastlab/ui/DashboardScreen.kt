@@ -166,6 +166,7 @@ fun DashboardScreen(onNavigate: (String) -> Unit) {
                     }, enabled = !scanning, subtitle = "inventory every capability")
                     BigActionButton("MIRACAST TEST", { onNavigate("miracast") }, subtitle = "guided Smart View wizard")
                     BigActionButton("ROUTES A-D", { onNavigate("routes") }, subtitle = "can an app reach the display Samsung established?")
+                    BigActionButton("DEX CONTROL + YOUTUBE", { onNavigate("dex_control") }, subtitle = "keyboard, mouse, hotkeys, and the Intent route that works")
                     BigActionButton("DISPLAY TEST", { onNavigate("display") }, subtitle = "topology, metrics, secondary display")
                     BigActionButton("NETWORK / WI-FI DIRECT", { onNavigate("network") }, subtitle = "P2P peers, transports, interfaces")
                     BigActionButton("AUDIO TEST", { onNavigate("audio") }, subtitle = "tone, stereo, latency pulse")

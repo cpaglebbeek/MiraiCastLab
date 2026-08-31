@@ -32,7 +32,9 @@
     <!-- Optional: audio capture characterisation (section 2.5). App starts fine without it. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- Optional: Bluetooth HID baseline test (section 2.6C). Never used to pair silently. -->
+    <!-- Optional: Bluetooth HID. BLUETOOTH_CONNECT covers both the input baseline (section 2.6C)
+         and registering this phone as a HID keyboard/mouse toward an ALREADY PAIRED host. The app
+         never initiates pairing, and never connects without the tester pressing a button. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Feature declarations are all optional: the app must run on any device and report
@@ -127,6 +129,27 @@
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode"
             android:theme="@style/Theme.MiraiCastLab" />
+
+        <!--
+          Off by default. Android will not run this until the tester enables it in Settings, and the
+          app additionally requires an explicit in-app arm before it sends anything. It exists for
+          one measurement: whether an ordinary app can drive a DeX desktop with emulated keyboard and
+          mouse input, which is the only unprivileged route that exists. Its config asks for the
+          narrowest possible capability set - no window-content retrieval, no key filtering.
+          See SAFETY.md and dex/LabAccessibilityService.kt.
+        -->
+        <service
+            android:name=".dex.LabAccessibilityService"
+            android:exported="false"
+            android:label="@string/dex_control_title"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
         <service
             android:name=".projection.ProjectionService"

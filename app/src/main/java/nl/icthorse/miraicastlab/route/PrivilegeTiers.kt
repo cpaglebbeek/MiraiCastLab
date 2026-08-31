@@ -256,9 +256,11 @@ object PrivilegeTiers {
             note = "Source: InputManager.injectInputEvent requires android.permission.INJECT_EVENTS, " +
                 "which is signature-level; the shell uid holds it, which is why the `input` command " +
                 "works. An app can dispatch events only into its own windows. An AccessibilityService " +
-                "can dispatch gestures system-wide, and is named here for completeness only: " +
-                "SAFETY.md rules out using accessibility as a workaround, so this project does not " +
-                "take that path. Nothing in this row is about sending input INTO the vehicle.",
+                "CAN dispatch gestures system-wide, and since v0.3.0 this project implements exactly " +
+                "that in dex/InputRoutes.kt - user-enabled, separately armed, and configured without " +
+                "window-content retrieval, which is why it can tap but cannot type. It originates no " +
+                "key events at all: no accessibility API does. Nothing in this row is about sending " +
+                "input INTO the vehicle.",
             measured = false,
         ),
         TierRow(
