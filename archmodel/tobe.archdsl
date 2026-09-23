@@ -1,0 +1,75 @@
+// MiraiCastLab — architectuurontwerp (to-be) in ArchDSL.
+// Dit bestand is de bron van het ONTWERP. De platen in generated/ worden hieruit
+// plus de gemeten code (asis.facts.json) gegenereerd met /ModelArchDSL update.
+//
+// Conventies (ArchPortal/docs/DSL_CONVENTIES.md):
+//   -view conceptueel|logisch|fysiek   niveau (standaard: afgeleid van de ArchiMate-laag)
+//   -attr trace = "route:* /api/*, module:server"   koppeling met code (globs op feit-id's)
+//   -attr status = "gepland"           expliciet gepland element zonder trace
+//   Viewpoint reis_x "Klantreis: ..." { -attr journey = "true"  -attr steps = "a b c"  -attr actor = "klant" }
+//
+// SKELET: automatisch voorgesteld uit de modules in de code. Vul conceptueel niveau,
+// klantreizen en relaties aan; verwijder wat niet klopt.
+
+set title "MiraiCastLab"
+set purpose "TODO: doel van het systeem in één zin"
+
+// ---- Conceptueel ----
+BusinessActor gebruiker "Gebruiker"
+
+// ---- Logisch (voorstel uit modules) ----
+ApplicationComponent comp_app "app" {
+    -attr trace = "module:app/src/main/java"
+}
+ApplicationComponent comp_app_audio "app:/audio" {
+    -attr trace = "module:app/src/main/java/audio"
+}
+ApplicationComponent comp_app_auto "app:/auto" {
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent comp_app_core "app:/core" {
+    -attr trace = "module:app/src/main/java/core"
+}
+ApplicationComponent comp_app_dex "app:/dex" {
+    -attr trace = "module:app/src/main/java/dex"
+}
+ApplicationComponent comp_app_display "app:/display" {
+    -attr trace = "module:app/src/main/java/display"
+}
+ApplicationComponent comp_app_input "app:/input" {
+    -attr trace = "module:app/src/main/java/input"
+}
+ApplicationComponent comp_app_net "app:/net" {
+    -attr trace = "module:app/src/main/java/net"
+}
+ApplicationComponent comp_app_projection "app:/projection" {
+    -attr trace = "module:app/src/main/java/projection"
+}
+ApplicationComponent comp_app_report "app:/report" {
+    -attr trace = "module:app/src/main/java/report"
+}
+ApplicationComponent comp_app_route "app:/route" {
+    -attr trace = "module:app/src/main/java/route"
+}
+ApplicationComponent comp_app_samsung "app:/samsung" {
+    -attr trace = "module:app/src/main/java/samsung"
+}
+ApplicationComponent comp_app_scan "app:/scan" {
+    -attr trace = "module:app/src/main/java/scan"
+}
+ApplicationComponent comp_app_scene "app:/scene" {
+    -attr trace = "module:app/src/main/java/scene"
+}
+ApplicationComponent comp_app_ui "app:/ui" {
+    -attr trace = "module:app/src/main/java/ui"
+}
+ApplicationComponent comp_tools_report "tools/report" {
+    -attr trace = "module:tools/report"
+}
+
+// ---- Klantreizen ----
+// Viewpoint reis_voorbeeld "Klantreis: voorbeeld" {
+//     -attr journey = "true"
+//     -attr actor = "gebruiker"
+//     -attr steps = "stap_1 stap_2"
+// }
