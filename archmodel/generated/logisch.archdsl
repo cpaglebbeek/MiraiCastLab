@@ -1,0 +1,244 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Logisch"
+set subtitle "Architectuurplaat logisch niveau (ArchiMate/Dragon1)"
+set purpose "Empirisch vaststellen welke beeld-, geluid- en invoerpaden bestaan tussen een niet-gerootte Galaxy Z Fold en een Toyota Mirai 2025, met per bevinding een bewijsstatus."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_application "Applicatie" {
+    -width 1220
+    -height 700
+}
+ApplicationComponent ac_host "App-host (MainActivity)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java, android:activity:MainActivity"
+    -description "Single-activity host voor alle bestemmingen."
+}
+ApplicationComponent ac_core "core — bewijsmodel en contract" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/core"
+    -description "LabStatus, Observation, LogRecord, SessionLogger, Probe/safeObserve, ProbeRegistry, LabPermissions, DashboardKeys, Json, Experiment."
+}
+ApplicationComponent ac_ui "ui — thema, navigatie, dashboard" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/ui"
+    -description "LabNavHost: vlakke graaf van string-routes; DashboardScreen; LabComponents; LabTheme (vast donker, MC-007)."
+}
+ApplicationComponent ac_scan "scan — apparaat- en codecinventaris" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/scan"
+}
+ApplicationComponent ac_display "display — schermtopologie en MediaRouter" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/display"
+}
+ApplicationComponent ac_net "net — Wi-Fi Direct en connectiviteit" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/net"
+}
+ApplicationComponent ac_audio "audio — routes en gesynthetiseerde testtonen" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/audio"
+}
+ApplicationComponent ac_input "input — eventmonitor en touch-back-raster" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/input"
+}
+ApplicationComponent ac_projection "projection — capture, VirtualDisplay, H.264" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/projection"
+}
+ApplicationComponent ac_scene "scene — diagnostisch testbeeld" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/scene, android:activity:PresentationHostActivity"
+    -description "SceneEngine/Renderer; PresentationHostActivity zet het beeld via setLaunchDisplayId op een secundair scherm."
+}
+ApplicationComponent ac_samsung "samsung — Smart View, DeX, Miracast-wizard" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/samsung"
+}
+ApplicationComponent ac_auto "auto — Android Auto-matrix en rijstatus-observatie" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent ac_route "route — routes A-D, schermrol, privilege-tiers" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/route"
+    -description "DisplayRole (verdict nooit sterker dan INFERRED voor remote), RouteA-D, LabPresentation, PrivilegeTiers."
+}
+ApplicationComponent ac_dex "dex — DeX-bediening en Intent-route (v0.3.0)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/dex"
+    -description "InputRoutes, DexInput, HidKeyboard/HidKeyMap/HidReportDescriptor, AppLauncher, YouTubeActions, DexControlScreen."
+}
+ApplicationComponent ac_report "report — 20-sectie-generator, export, logviewer" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/report, android:provider:FileProvider"
+}
+ApplicationComponent ac_render "Werkstation-renderer (render_report.py)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:tools/report"
+    -description "Rendert JSONL of JSON-export tot hetzelfde 20-sectie-rapport; ook voor sessies die de exportstap nooit haalden."
+}
+ApplicationInterface ai_probe "Probe-contract (12 probes, read-only, idempotent)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/core"
+}
+ApplicationService as_a11y "Accessibility-service (gebaren, twee sloten)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "android:service:LabAccessibilityService"
+}
+DataObject do_observation "Observation met LabStatus" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/core"
+}
+DataObject do_evidence "Bewijslog evidence/run-<ts>-<id>.jsonl" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/core"
+    -description "Append-only, per record geflusht; overleeft het killen van het proces."
+}
+DataObject do_report "Rapport report.md / .json / .csv" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/report"
+}
+DataObject do_aamatrix "Android Auto-matrix A-F (persistent)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent ac_smartview "Samsung Smart View / Wireless DeX" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+    -description "Eigenaar van de Miracast-sessie (route B); de app kan niet zelf verbinden (P6)."
+}
+ApplicationComponent ac_androidauto "Android Auto (gearhead)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+ApplicationComponent ac_youtube "YouTube-app (doel van de Intent-route)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+ApplicationComponent ac_horseapk "HorseAPK-portaal (distributie)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Artifact ar_perm_net "Permissies netwerk + Wi-Fi Direct" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "permission:ACCESS_NETWORK_STATE, permission:ACCESS_WIFI_STATE, permission:CHANGE_WIFI_STATE, permission:NEARBY_WIFI_DEVICES, permission:ACCESS_*_LOCATION"
+    -description "Locatie alleen t/m API 32 voor P2P-discovery (MC-004); nooit locatie gelezen."
+}
+Artifact ar_perm_capture "Permissies capture (FGS, notificaties, audio)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "permission:FOREGROUND_SERVICE*, permission:POST_NOTIFICATIONS, permission:RECORD_AUDIO"
+}
+Artifact ar_perm_bt "Permissie Bluetooth HID" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "permission:BLUETOOTH_CONNECT"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_application 40, 40
+pos ac_host 60, 90
+pos ac_core 260, 90
+pos ac_ui 460, 90
+pos ac_scan 660, 90
+pos ac_display 860, 90
+pos ac_net 1060, 90
+pos ac_audio 60, 220
+pos ac_input 260, 220
+pos ac_projection 460, 220
+pos ac_scene 660, 220
+pos ac_samsung 860, 220
+pos ac_auto 1060, 220
+pos ac_route 60, 350
+pos ac_dex 260, 350
+pos ac_report 460, 350
+pos ac_render 660, 350
+pos ai_probe 860, 350
+pos as_a11y 1060, 350
+pos do_observation 60, 480
+pos do_evidence 260, 480
+pos do_report 460, 480
+pos do_aamatrix 660, 480
+pos ac_smartview 860, 480
+pos ac_androidauto 1060, 480
+pos ac_youtube 60, 610
+pos ac_horseapk 260, 610
+pos ar_perm_net 460, 610
+pos ar_perm_capture 660, 610
+pos ar_perm_bt 860, 610
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ac_host composes ac_ui "host"
+ac_ui serves ac_scan "navigeert naar"
+ac_ui serves ac_route "navigeert naar"
+ac_ui serves ac_dex "navigeert naar"
+ac_scan realizes ai_probe
+ac_display realizes ai_probe
+ac_net realizes ai_probe
+ac_audio realizes ai_probe
+ac_input realizes ai_probe
+ac_projection realizes ai_probe
+ac_samsung realizes ai_probe
+ac_auto realizes ai_probe
+ac_core composes ai_probe
+ai_probe accesses do_observation "levert"
+ac_core accesses do_observation "logt"
+ac_core accesses do_evidence "schrijft (SessionLogger)"
+ac_report accesses do_evidence "leest"
+ac_report accesses do_report "schrijft"
+ac_render accesses do_evidence "leest (ook afgebroken sessie)"
+ac_render accesses do_report "schrijft"
+ac_auto accesses do_aamatrix "schrijft"
+ac_core serves ac_scan "contract"
+ac_core serves ac_display "contract"
+ac_core serves ac_net "contract"
+ac_core serves ac_audio "contract"
+ac_core serves ac_input "contract"
+ac_core serves ac_projection "contract"
+ac_core serves ac_scene "contract"
+ac_core serves ac_samsung "contract"
+ac_core serves ac_auto "contract"
+ac_core serves ac_report "contract"
+ac_core serves ac_route "contract"
+ac_core serves ac_dex "contract"
+ac_dex composes as_a11y
+ac_dex -> ac_youtube "Intent + setLaunchDisplayId"
+ac_smartview serves ac_scene "levert secundair scherm"
+ac_horseapk serves ac_host "levert APK"
+ar_perm_net associates ac_net
+ar_perm_capture associates ac_audio
+ar_perm_bt associates ac_dex

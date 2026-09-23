@@ -1,0 +1,218 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Klantreis: voertuigsessie Z Fold x Mirai (stilstaand)"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "De testprocedure van begin tot eind; alles voertuigzijdig staat nog op NOT TESTED (MC-V1..V4)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_motivation "Motivatie" {
+    -width 400
+    -height 180
+}
+Constraint cn_veiligheid "Geen interlock-bypass, CAN-injectie of voertuigstatus-spoofing (SAFETY)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+
+Group laag_business "Business" {
+    -width 1220
+    -height 440
+}
+BusinessRole br_tester "Tester met Z Fold in stilstaande Mirai" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_baseline "Baseline-scan thuis, zonder auto" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_scan_auto "Baseline in de auto, niets verbonden (rij A)" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_miracast "Smart View handmatig verbinden en wijzigingen volgen" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_scene "Testbeeld op het autoscherm zetten en aflezen" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_touch "Touch-back: doelen op het autoscherm aanraken" in laag_business {
+    -step 5
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_audio "Audiotests op de autospeakers" in laag_business {
+    -step 6
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_aa "Android Auto-coëxistentiematrix (rijen C-F)" in laag_business {
+    -step 7
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_motion "Rijstatus observeren met markers (alleen observatie)" in laag_business {
+    -step 8
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_export "Rapport exporteren (Markdown, JSON, CSV)" in laag_business {
+    -step 9
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_findings "Protocol-findings bijwerken uit het rapport" in laag_business {
+    -step 10
+    -attr status = "ontwerp"
+}
+BusinessService bs_matrix "Capability-matrix (protocol-findings.md)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessObject bo_findings "Protocolbevindingen (docs/protocol-findings.md)" in laag_business {
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 1220
+    -height 440
+}
+ApplicationComponent ac_audio "audio — routes en gesynthetiseerde testtonen" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/audio"
+}
+ApplicationComponent ac_ui "ui — thema, navigatie, dashboard" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/ui"
+    -description "LabNavHost: vlakke graaf van string-routes; DashboardScreen; LabComponents; LabTheme (vast donker, MC-007)."
+}
+ApplicationComponent ac_androidauto "Android Auto (gearhead)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+ApplicationComponent ac_scan "scan — apparaat- en codecinventaris" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/scan"
+}
+ApplicationComponent ac_auto "auto — Android Auto-matrix en rijstatus-observatie" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent ac_display "display — schermtopologie en MediaRouter" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/display"
+}
+ApplicationComponent ac_net "net — Wi-Fi Direct en connectiviteit" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/net"
+}
+ApplicationComponent ac_samsung "samsung — Smart View, DeX, Miracast-wizard" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/samsung"
+}
+ApplicationComponent ac_report "report — 20-sectie-generator, export, logviewer" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/report, android:provider:FileProvider"
+}
+ApplicationComponent ac_smartview "Samsung Smart View / Wireless DeX" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+    -description "Eigenaar van de Miracast-sessie (route B); de app kan niet zelf verbinden (P6)."
+}
+ApplicationComponent ac_projection "projection — capture, VirtualDisplay, H.264" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/projection"
+}
+ApplicationComponent ac_scene "scene — diagnostisch testbeeld" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/scene, android:activity:PresentationHostActivity"
+    -description "SceneEngine/Renderer; PresentationHostActivity zet het beeld via setLaunchDisplayId op een secundair scherm."
+}
+ApplicationComponent ac_render "Werkstation-renderer (render_report.py)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:tools/report"
+    -description "Rendert JSONL of JSON-export tot hetzelfde 20-sectie-rapport; ook voor sessies die de exportstap nooit haalden."
+}
+ApplicationComponent ac_input "input — eventmonitor en touch-back-raster" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/input"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_motivation 40, 40
+pos cn_veiligheid 60, 90
+pos laag_business 40, 260
+pos br_tester 60, 310
+pos bp_baseline 260, 310
+pos bp_scan_auto 460, 310
+pos bp_miracast 660, 310
+pos bp_scene 860, 310
+pos bp_touch 1060, 310
+pos bp_audio 60, 440
+pos bp_aa 260, 440
+pos bp_motion 460, 440
+pos bp_export 660, 440
+pos bp_findings 860, 440
+pos bs_matrix 1060, 440
+pos bo_findings 60, 570
+pos laag_application 40, 740
+pos ac_audio 60, 790
+pos ac_ui 260, 790
+pos ac_androidauto 460, 790
+pos ac_scan 660, 790
+pos ac_auto 860, 790
+pos ac_display 1060, 790
+pos ac_net 60, 920
+pos ac_samsung 260, 920
+pos ac_report 460, 920
+pos ac_smartview 660, 920
+pos ac_projection 860, 920
+pos ac_scene 1060, 920
+pos ac_render 60, 1050
+pos ac_input 260, 1050
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+cn_veiligheid influences bp_motion "begrenst"
+bp_findings realizes bs_matrix
+bp_findings accesses bo_findings "schrijft"
+ac_scan serves bp_baseline
+ac_ui serves bp_baseline
+ac_scan serves bp_scan_auto
+ac_auto serves bp_scan_auto
+ac_samsung serves bp_miracast
+ac_smartview serves bp_miracast
+ac_net serves bp_miracast
+ac_display serves bp_miracast
+ac_scene serves bp_scene
+ac_projection serves bp_scene
+ac_input serves bp_touch
+ac_audio serves bp_audio
+ac_auto serves bp_aa
+ac_androidauto serves bp_aa
+ac_auto serves bp_motion
+ac_report serves bp_export
+ac_render serves bp_findings
+ac_ui serves ac_scan "navigeert naar"
+ac_smartview serves ac_scene "levert secundair scherm"
+bp_baseline -> bp_scan_auto
+bp_scan_auto -> bp_miracast
+bp_miracast -> bp_scene
+bp_scene -> bp_touch
+bp_touch -> bp_audio
+bp_audio -> bp_aa
+bp_aa -> bp_motion
+bp_motion -> bp_export
+bp_export -> bp_findings
+br_tester -> bp_baseline "start"

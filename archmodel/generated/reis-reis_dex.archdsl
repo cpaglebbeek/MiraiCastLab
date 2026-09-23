@@ -1,0 +1,94 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Klantreis: DeX-bediening en Intent-route (v0.3.0)"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Hoofdbevinding is negatief: de hotkey-flow is op ordinary-app-niveau onbereikbaar; de Intent-route werkt wel."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 180
+}
+BusinessRole br_tester "Tester met Z Fold in stilstaande Mirai" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_arm "Accessibility inschakelen en in-app armeren" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_input "Invoerroutes per tier meten (Instrumentation, accessibility, HID, adb)" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_hotkey "Hotkey-flow per stap rapporteren" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_intent "YouTube via Intent op gekozen scherm openen" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_export "Rapport exporteren (Markdown, JSON, CSV)" in laag_business {
+    -step 5
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 820
+    -height 180
+}
+ApplicationService as_a11y "Accessibility-service (gebaren, twee sloten)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "android:service:LabAccessibilityService"
+}
+ApplicationComponent ac_dex "dex — DeX-bediening en Intent-route (v0.3.0)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/dex"
+    -description "InputRoutes, DexInput, HidKeyboard/HidKeyMap/HidReportDescriptor, AppLauncher, YouTubeActions, DexControlScreen."
+}
+ApplicationComponent ac_youtube "YouTube-app (doel van de Intent-route)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+ApplicationComponent ac_report "report — 20-sectie-generator, export, logviewer" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/report, android:provider:FileProvider"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos br_tester 60, 90
+pos bp_dex_arm 260, 90
+pos bp_dex_input 460, 90
+pos bp_dex_hotkey 660, 90
+pos bp_dex_intent 860, 90
+pos bp_export 1060, 90
+pos laag_application 40, 260
+pos as_a11y 60, 310
+pos ac_dex 260, 310
+pos ac_youtube 460, 310
+pos ac_report 660, 310
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ac_report serves bp_export
+as_a11y serves bp_dex_arm
+ac_dex serves bp_dex_arm
+ac_dex serves bp_dex_input
+ac_dex serves bp_dex_hotkey
+ac_dex serves bp_dex_intent
+ac_youtube serves bp_dex_intent
+ac_dex composes as_a11y
+ac_dex -> ac_youtube "Intent + setLaunchDisplayId"
+bp_dex_arm -> bp_dex_input
+bp_dex_input -> bp_dex_hotkey
+bp_dex_hotkey -> bp_dex_intent
+bp_dex_intent -> bp_export
+br_tester -> bp_dex_arm "start"

@@ -1,0 +1,209 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Conceptueel"
+set subtitle "Architectuurplaat conceptueel niveau (ArchiMate/Dragon1)"
+set purpose "Empirisch vaststellen welke beeld-, geluid- en invoerpaden bestaan tussen een niet-gerootte Galaxy Z Fold en een Toyota Mirai 2025, met per bevinding een bewijsstatus."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_motivation "Motivatie" {
+    -width 1220
+    -height 440
+}
+Driver dr_onbekend "Onbekend wat werkt tussen Z Fold en Mirai 2025" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Driver dr_vals "Een vals resultaat is het te vermijden risico (P6)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_empirisch "Empirisch antwoord: beeld, geluid, touch-back" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_routes "Kan een app content op het door Samsung opgezette scherm zetten (routes A-D)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_dexbediening "Kan deze app het toetsenbord en de muis van DeX zijn (v0.3.0)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_status "Elke bevinding draagt een bewijsstatus (P1)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_nottested "NOT_TESTED wordt nooit UNSUPPORTED (P2)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_schrijven "Bewijs wordt geschreven terwijl het gebeurt (P8)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_rapport "Rapport met mechanische indeling uit de enum" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_veiligheid "Geen interlock-bypass, CAN-injectie of voertuigstatus-spoofing (SAFETY)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_offline "Geen INTERNET-permissie: offline door constructie (P11)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_geenroot "Geen root; primaire build op ordinary-app-niveau" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_modules "Modules importeren elkaar niet, alles hangt aan core (P10)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_stilstand "Voertuigtests alleen stilstaand, op de bank of in een emulator" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_twee_sloten "Accessibility-service uit achter twee sloten (Instellingen + in-app armed)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Principle pr_nietsinken "Telefoonkant zegt niets over de sink (P3)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Principle pr_crash "Een probe-crash is data, geen storing (P4)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Stakeholder sh_tester "Tester in de auto (P9)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+
+Group laag_business "Business" {
+    -width 1220
+    -height 570
+}
+BusinessProcess bp_sessie "Voertuigsessie uitvoeren (testprocedure)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_motion "Rijstatus observeren met markers (alleen observatie)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessActor ba_christian "Christian (eigenaar en tester)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessRole br_tester "Tester met Z Fold in stilstaande Mirai" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_bewijs "Bewijsbestand met gegradeerde bevindingen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_matrix "Capability-matrix (protocol-findings.md)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessObject bo_findings "Protocolbevindingen (docs/protocol-findings.md)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_baseline "Baseline-scan thuis, zonder auto" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_scan_auto "Baseline in de auto, niets verbonden (rij A)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_miracast "Smart View handmatig verbinden en wijzigingen volgen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_scene "Testbeeld op het autoscherm zetten en aflezen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_touch "Touch-back: doelen op het autoscherm aanraken" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_audio "Audiotests op de autospeakers" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_aa "Android Auto-coëxistentiematrix (rijen C-F)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_export "Rapport exporteren (Markdown, JSON, CSV)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_findings "Protocol-findings bijwerken uit het rapport" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_rol "Schermrol bepalen (welk Display is DeX/Miracast)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_route_ab "Routes A en B meten (WFD-toegang, sessie-eigendom)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_route_cd "Routes C en D meten (eigen / andere app op gekozen scherm)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_tiers "Capability x privilege-tier-matrix lezen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_arm "Accessibility inschakelen en in-app armeren" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_input "Invoerroutes per tier meten (Instrumentation, accessibility, HID, adb)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_hotkey "Hotkey-flow per stap rapporteren" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_dex_intent "YouTube via Intent op gekozen scherm openen" in laag_business {
+    -attr status = "ontwerp"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_motivation 40, 40
+pos dr_onbekend 60, 90
+pos dr_vals 260, 90
+pos go_empirisch 460, 90
+pos go_routes 660, 90
+pos go_dexbediening 860, 90
+pos rq_status 1060, 90
+pos rq_nottested 60, 220
+pos rq_schrijven 260, 220
+pos rq_rapport 460, 220
+pos cn_veiligheid 660, 220
+pos cn_offline 860, 220
+pos cn_geenroot 1060, 220
+pos cn_modules 60, 350
+pos cn_stilstand 260, 350
+pos cn_twee_sloten 460, 350
+pos pr_nietsinken 660, 350
+pos pr_crash 860, 350
+pos sh_tester 1060, 350
+pos laag_business 40, 520
+pos bp_sessie 60, 570
+pos bp_motion 260, 570
+pos ba_christian 460, 570
+pos br_tester 660, 570
+pos bs_bewijs 860, 570
+pos bs_matrix 1060, 570
+pos bo_findings 60, 700
+pos bp_baseline 260, 700
+pos bp_scan_auto 460, 700
+pos bp_miracast 660, 700
+pos bp_scene 860, 700
+pos bp_touch 1060, 700
+pos bp_audio 60, 830
+pos bp_aa 260, 830
+pos bp_export 460, 830
+pos bp_findings 660, 830
+pos bp_rol 860, 830
+pos bp_route_ab 1060, 830
+pos bp_route_cd 60, 960
+pos bp_tiers 260, 960
+pos bp_dex_arm 460, 960
+pos bp_dex_input 660, 960
+pos bp_dex_hotkey 860, 960
+pos bp_dex_intent 1060, 960
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+dr_onbekend influences go_empirisch "drijft aan"
+dr_vals influences rq_status "vereist"
+go_empirisch influences go_routes "aangescherpt tot"
+go_routes influences go_dexbediening "uitgebreid met"
+go_empirisch influences rq_status "vereist"
+rq_status influences rq_nottested "vereist"
+go_empirisch influences rq_schrijven "vereist"
+rq_nottested influences rq_rapport "vereist"
+cn_veiligheid influences bp_motion "begrenst"
+cn_stilstand influences bp_sessie "begrenst"
+ba_christian -> br_tester
+br_tester -> bp_sessie
+bp_sessie realizes bs_bewijs
+bp_findings realizes bs_matrix
+bp_findings accesses bo_findings "schrijft"

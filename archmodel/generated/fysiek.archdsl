@@ -1,0 +1,72 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Fysiek"
+set subtitle "Architectuurplaat fysiek niveau (ArchiMate/Dragon1)"
+set purpose "Empirisch vaststellen welke beeld-, geluid- en invoerpaden bestaan tussen een niet-gerootte Galaxy Z Fold en een Toyota Mirai 2025, met per bevinding een bewijsstatus."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_technology "Technologie" {
+    -width 1220
+    -height 310
+}
+Device dv_zfold "Samsung Galaxy Z Fold (niet geroot)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Device dv_mirai "Toyota Mirai 2025 head unit" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Node nd_hc55 "HC55 157.180.29.184 (build + APK-hosting)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Node nd_box "HorseBoat-box 95.216.46.120 (emulator-5584, smoke gate L3)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+CommunicationNetwork cn_wfd "Wi-Fi Direct / Miracast-link" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+CommunicationNetwork cn_bt "Bluetooth (HID naar gekoppelde host)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+SystemSoftware ss_projsvc "ProjectionService (FGS mediaProjection)" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "android:service:ProjectionService"
+}
+SystemSoftware ss_android "Android-runtime en Jetpack-bibliotheken" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "dep:maven:*"
+    -description "Compose/Material 3, lifecycle, navigation, coroutines, core-ktx (docs/DEPENDENCIES.md)."
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_technology 40, 40
+pos dv_zfold 60, 90
+pos dv_mirai 260, 90
+pos nd_hc55 460, 90
+pos nd_box 660, 90
+pos cn_wfd 860, 90
+pos cn_bt 1060, 90
+pos ss_projsvc 60, 220
+pos ss_android 260, 220
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+dv_zfold associates cn_wfd
+cn_wfd associates dv_mirai "Miracast-sink"
+dv_zfold associates cn_bt

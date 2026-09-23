@@ -1,0 +1,27 @@
+{
+  "tool": "ModelArchDSL",
+  "toolVersion": "0.1.0",
+  "engineSha256": "0bdabb3b46febb6190ec1e1698d285c5b140e15f4c7f07e7c22a85f2105dacae",
+  "tobeSha256": "9bb65946cad722400ad96fb18384a8d86e59a3c5aa6226af5616f2d96ec9c59f",
+  "factsSha256": "64ffbbafd3da0ca91450e61dcb73d60372c03365ac11d4de4fdb3c184b58e435",
+  "plates": {
+    "conceptueel.archdsl": "1490af5aa700d7ec32c8dce93389804a9697c328bb65f74014b609f79ca53244",
+    "logisch.archdsl": "cfe34751ff76508df02938167efc3ed42af66088edf7a78517b9b13ff5ac27bf",
+    "fysiek.archdsl": "3d590433cc10397410946d1aa6cab9afd638ee3c391d0e8b100bf8246b3547b9",
+    "reis-reis_sessie.archdsl": "2ab71c74455972d6892694f9fd8adf92407a3c785f53f8923d029889f87165b2",
+    "reis-reis_routes.archdsl": "890216373c3ec9dc31f1b52e13f9ed487f4448b69f5a7dc517484cdee9323d03",
+    "reis-reis_dex.archdsl": "8f51d815824606bbe28b04c4ee5697cd6ef956ad3d077a9bfca16ac6d9a5ec0c"
+  },
+  "counts": {
+    "gebouwd": 27,
+    "deels": 0,
+    "gepland": 0,
+    "alleen_code": 0,
+    "ongetraceerd": 0,
+    "extern": 10,
+    "ontwerp": 42
+  },
+  "facts": 44,
+  "unclaimedFacts": 0,
+  "warnings": 0
+}

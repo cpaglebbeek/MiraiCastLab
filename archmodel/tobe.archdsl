@@ -1,0 +1,321 @@
+// MiraiCastLab — architectuurontwerp (to-be) in ArchDSL.
+// Bron van het ONTWERP. Platen in generated/ komen hieruit plus de gemeten code
+// (asis.facts.json) via /ModelArchDSL update. Niet de platen bewerken, wel dit bestand.
+// Inhoud overgenomen uit README.md, ARCHITECTURE.md, docs/architecture.md, docs/ROUTES.md,
+// docs/PRINCIPLES.md, docs/DEPENDENCIES.md, SAFETY.md, BUILD.md, TESTPLAN.md, BUGLIST.md,
+// docs/toyota-mirai-2025-test-procedure.md, AndroidManifest.xml en ui/LabNavHost.kt (stand v0.3.0 Mirai-4).
+//
+// Conventies: ArchPortal/docs/DSL_CONVENTIES.md
+//   -view conceptueel|logisch|fysiek · -attr trace = "<glob op feit-id>" · -attr status = "gepland"|"extern"
+
+set title "MiraiCastLab"
+set subtitle "Capability explorer Z Fold x Toyota Mirai 2025 — v0.3.0 Mirai-4"
+set purpose "Empirisch vaststellen welke beeld-, geluid- en invoerpaden bestaan tussen een niet-gerootte Galaxy Z Fold en een Toyota Mirai 2025, met per bevinding een bewijsstatus."
+
+// ================= Conceptueel =================
+Driver dr_onbekend "Onbekend wat werkt tussen Z Fold en Mirai 2025"
+Driver dr_vals "Een vals resultaat is het te vermijden risico (P6)"
+Goal go_empirisch "Empirisch antwoord: beeld, geluid, touch-back"
+Goal go_routes "Kan een app content op het door Samsung opgezette scherm zetten (routes A-D)"
+Goal go_dexbediening "Kan deze app het toetsenbord en de muis van DeX zijn (v0.3.0)"
+Requirement rq_status "Elke bevinding draagt een bewijsstatus (P1)"
+Requirement rq_nottested "NOT_TESTED wordt nooit UNSUPPORTED (P2)"
+Requirement rq_schrijven "Bewijs wordt geschreven terwijl het gebeurt (P8)"
+Requirement rq_rapport "Rapport met mechanische indeling uit de enum"
+Constraint cn_veiligheid "Geen interlock-bypass, CAN-injectie of voertuigstatus-spoofing (SAFETY)"
+Constraint cn_offline "Geen INTERNET-permissie: offline door constructie (P11)"
+Constraint cn_geenroot "Geen root; primaire build op ordinary-app-niveau"
+Constraint cn_modules "Modules importeren elkaar niet, alles hangt aan core (P10)"
+Constraint cn_stilstand "Voertuigtests alleen stilstaand, op de bank of in een emulator"
+Constraint cn_twee_sloten "Accessibility-service uit achter twee sloten (Instellingen + in-app armed)"
+Principle pr_nietsinken "Telefoonkant zegt niets over de sink (P3)"
+Principle pr_crash "Een probe-crash is data, geen storing (P4)"
+Stakeholder sh_tester "Tester in de auto (P9)"
+BusinessActor ba_christian "Christian (eigenaar en tester)"
+BusinessRole br_tester "Tester met Z Fold in stilstaande Mirai"
+BusinessService bs_bewijs "Bewijsbestand met gegradeerde bevindingen"
+BusinessService bs_matrix "Capability-matrix (protocol-findings.md)"
+BusinessProcess bp_sessie "Voertuigsessie uitvoeren (testprocedure)"
+BusinessObject bo_findings "Protocolbevindingen (docs/protocol-findings.md)"
+
+// Stappen van de klantreizen — voertuigsessie (testprocedure §0-§8)
+BusinessProcess bp_baseline "Baseline-scan thuis, zonder auto"
+BusinessProcess bp_scan_auto "Baseline in de auto, niets verbonden (rij A)"
+BusinessProcess bp_miracast "Smart View handmatig verbinden en wijzigingen volgen"
+BusinessProcess bp_scene "Testbeeld op het autoscherm zetten en aflezen"
+BusinessProcess bp_touch "Touch-back: doelen op het autoscherm aanraken"
+BusinessProcess bp_audio "Audiotests op de autospeakers"
+BusinessProcess bp_aa "Android Auto-coëxistentiematrix (rijen C-F)"
+BusinessProcess bp_motion "Rijstatus observeren met markers (alleen observatie)"
+BusinessProcess bp_export "Rapport exporteren (Markdown, JSON, CSV)"
+BusinessProcess bp_findings "Protocol-findings bijwerken uit het rapport"
+
+// Stappen — routes A-D
+BusinessProcess bp_rol "Schermrol bepalen (welk Display is DeX/Miracast)"
+BusinessProcess bp_route_ab "Routes A en B meten (WFD-toegang, sessie-eigendom)"
+BusinessProcess bp_route_cd "Routes C en D meten (eigen / andere app op gekozen scherm)"
+BusinessProcess bp_tiers "Capability x privilege-tier-matrix lezen"
+
+// Stappen — DeX-bediening
+BusinessProcess bp_dex_arm "Accessibility inschakelen en in-app armeren"
+BusinessProcess bp_dex_input "Invoerroutes per tier meten (Instrumentation, accessibility, HID, adb)"
+BusinessProcess bp_dex_hotkey "Hotkey-flow per stap rapporteren"
+BusinessProcess bp_dex_intent "YouTube via Intent op gekozen scherm openen"
+
+// ================= Logisch =================
+ApplicationComponent ac_host "App-host (MainActivity)" {
+    -attr trace = "module:app/src/main/java, android:activity:MainActivity"
+    -description "Single-activity host voor alle bestemmingen."
+}
+ApplicationComponent ac_core "core — bewijsmodel en contract" {
+    -attr trace = "module:app/src/main/java/core"
+    -description "LabStatus, Observation, LogRecord, SessionLogger, Probe/safeObserve, ProbeRegistry, LabPermissions, DashboardKeys, Json, Experiment."
+}
+ApplicationComponent ac_ui "ui — thema, navigatie, dashboard" {
+    -attr trace = "module:app/src/main/java/ui"
+    -description "LabNavHost: vlakke graaf van string-routes; DashboardScreen; LabComponents; LabTheme (vast donker, MC-007)."
+}
+ApplicationComponent ac_scan "scan — apparaat- en codecinventaris" {
+    -attr trace = "module:app/src/main/java/scan"
+}
+ApplicationComponent ac_display "display — schermtopologie en MediaRouter" {
+    -attr trace = "module:app/src/main/java/display"
+}
+ApplicationComponent ac_net "net — Wi-Fi Direct en connectiviteit" {
+    -attr trace = "module:app/src/main/java/net"
+}
+ApplicationComponent ac_audio "audio — routes en gesynthetiseerde testtonen" {
+    -attr trace = "module:app/src/main/java/audio"
+}
+ApplicationComponent ac_input "input — eventmonitor en touch-back-raster" {
+    -attr trace = "module:app/src/main/java/input"
+}
+ApplicationComponent ac_projection "projection — capture, VirtualDisplay, H.264" {
+    -attr trace = "module:app/src/main/java/projection"
+}
+ApplicationComponent ac_scene "scene — diagnostisch testbeeld" {
+    -attr trace = "module:app/src/main/java/scene, android:activity:PresentationHostActivity"
+    -description "SceneEngine/Renderer; PresentationHostActivity zet het beeld via setLaunchDisplayId op een secundair scherm."
+}
+ApplicationComponent ac_samsung "samsung — Smart View, DeX, Miracast-wizard" {
+    -attr trace = "module:app/src/main/java/samsung"
+}
+ApplicationComponent ac_auto "auto — Android Auto-matrix en rijstatus-observatie" {
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent ac_route "route — routes A-D, schermrol, privilege-tiers" {
+    -attr trace = "module:app/src/main/java/route"
+    -description "DisplayRole (verdict nooit sterker dan INFERRED voor remote), RouteA-D, LabPresentation, PrivilegeTiers."
+}
+ApplicationComponent ac_dex "dex — DeX-bediening en Intent-route (v0.3.0)" {
+    -attr trace = "module:app/src/main/java/dex"
+    -description "InputRoutes, DexInput, HidKeyboard/HidKeyMap/HidReportDescriptor, AppLauncher, YouTubeActions, DexControlScreen."
+}
+ApplicationComponent ac_report "report — 20-sectie-generator, export, logviewer" {
+    -attr trace = "module:app/src/main/java/report, android:provider:FileProvider"
+}
+ApplicationComponent ac_render "Werkstation-renderer (render_report.py)" {
+    -attr trace = "module:tools/report"
+    -description "Rendert JSONL of JSON-export tot hetzelfde 20-sectie-rapport; ook voor sessies die de exportstap nooit haalden."
+}
+ApplicationInterface ai_probe "Probe-contract (12 probes, read-only, idempotent)" {
+    -attr trace = "module:app/src/main/java/core"
+}
+ApplicationService as_a11y "Accessibility-service (gebaren, twee sloten)" {
+    -attr trace = "android:service:LabAccessibilityService"
+}
+DataObject do_observation "Observation met LabStatus" {
+    -attr trace = "module:app/src/main/java/core"
+}
+DataObject do_evidence "Bewijslog evidence/run-<ts>-<id>.jsonl" {
+    -attr trace = "module:app/src/main/java/core"
+    -description "Append-only, per record geflusht; overleeft het killen van het proces."
+}
+DataObject do_report "Rapport report.md / .json / .csv" {
+    -attr trace = "module:app/src/main/java/report"
+}
+DataObject do_aamatrix "Android Auto-matrix A-F (persistent)" {
+    -attr trace = "module:app/src/main/java/auto"
+}
+ApplicationComponent ac_smartview "Samsung Smart View / Wireless DeX" {
+    -attr status = "extern"
+    -description "Eigenaar van de Miracast-sessie (route B); de app kan niet zelf verbinden (P6)."
+}
+ApplicationComponent ac_androidauto "Android Auto (gearhead)" {
+    -attr status = "extern"
+}
+ApplicationComponent ac_youtube "YouTube-app (doel van de Intent-route)" {
+    -attr status = "extern"
+}
+ApplicationComponent ac_horseapk "HorseAPK-portaal (distributie)" {
+    -attr status = "extern"
+}
+
+// ================= Fysiek =================
+Device dv_zfold "Samsung Galaxy Z Fold (niet geroot)" {
+    -attr status = "extern"
+}
+Device dv_mirai "Toyota Mirai 2025 head unit" {
+    -attr status = "extern"
+}
+Node nd_hc55 "HC55 157.180.29.184 (build + APK-hosting)" {
+    -attr status = "extern"
+}
+Node nd_box "HorseBoat-box 95.216.46.120 (emulator-5584, smoke gate L3)" {
+    -attr status = "extern"
+}
+CommunicationNetwork cn_wfd "Wi-Fi Direct / Miracast-link" {
+    -attr status = "extern"
+}
+CommunicationNetwork cn_bt "Bluetooth (HID naar gekoppelde host)" {
+    -attr status = "extern"
+}
+SystemSoftware ss_projsvc "ProjectionService (FGS mediaProjection)" {
+    -attr trace = "android:service:ProjectionService"
+}
+SystemSoftware ss_android "Android-runtime en Jetpack-bibliotheken" {
+    -attr trace = "dep:maven:*"
+    -description "Compose/Material 3, lifecycle, navigation, coroutines, core-ktx (docs/DEPENDENCIES.md)."
+}
+Artifact ar_perm_net "Permissies netwerk + Wi-Fi Direct" {
+    -attr trace = "permission:ACCESS_NETWORK_STATE, permission:ACCESS_WIFI_STATE, permission:CHANGE_WIFI_STATE, permission:NEARBY_WIFI_DEVICES, permission:ACCESS_*_LOCATION"
+    -description "Locatie alleen t/m API 32 voor P2P-discovery (MC-004); nooit locatie gelezen."
+}
+Artifact ar_perm_capture "Permissies capture (FGS, notificaties, audio)" {
+    -attr trace = "permission:FOREGROUND_SERVICE*, permission:POST_NOTIFICATIONS, permission:RECORD_AUDIO"
+}
+Artifact ar_perm_bt "Permissie Bluetooth HID" {
+    -attr trace = "permission:BLUETOOTH_CONNECT"
+}
+
+// ================= Relaties =================
+dr_onbekend -> go_empirisch : influence "drijft aan"
+dr_vals -> rq_status : influence "vereist"
+go_empirisch -> go_routes : influence "aangescherpt tot"
+go_routes -> go_dexbediening : influence "uitgebreid met"
+go_empirisch -> rq_status : influence "vereist"
+rq_status -> rq_nottested : influence "vereist"
+go_empirisch -> rq_schrijven : influence "vereist"
+rq_nottested -> rq_rapport : influence "vereist"
+cn_veiligheid -> bp_motion : influence "begrenst"
+cn_stilstand -> bp_sessie : influence "begrenst"
+cn_offline -> ac_dex : influence "begrenst (URL doorgeven, nooit ophalen)"
+cn_geenroot -> ac_route : influence "begrenst"
+cn_modules -> ac_core : influence "vormt"
+cn_twee_sloten -> as_a11y : influence "begrenst"
+pr_nietsinken -> ac_projection : influence "begrenst"
+pr_crash -> ai_probe : influence "vormt"
+sh_tester -> ac_ui : influence "één tik heen, één tik terug"
+ba_christian -> br_tester : assignment
+br_tester -> bp_sessie : assignment
+bp_sessie -> bs_bewijs : realization
+bp_findings -> bs_matrix : realization
+bp_findings -> bo_findings : access "schrijft"
+rq_status -> do_observation : realization
+rq_schrijven -> do_evidence : realization
+rq_rapport -> ac_report : realization
+
+// Klantreis-stappen dragen
+ac_scan -> bp_baseline : serving
+ac_ui -> bp_baseline : serving
+ac_scan -> bp_scan_auto : serving
+ac_auto -> bp_scan_auto : serving
+ac_samsung -> bp_miracast : serving
+ac_smartview -> bp_miracast : serving
+ac_net -> bp_miracast : serving
+ac_display -> bp_miracast : serving
+ac_scene -> bp_scene : serving
+ac_projection -> bp_scene : serving
+ac_input -> bp_touch : serving
+ac_audio -> bp_audio : serving
+ac_auto -> bp_aa : serving
+ac_androidauto -> bp_aa : serving
+ac_auto -> bp_motion : serving
+ac_report -> bp_export : serving
+ac_render -> bp_findings : serving
+ac_route -> bp_rol : serving
+ac_display -> bp_rol : serving
+ac_route -> bp_route_ab : serving
+ac_route -> bp_route_cd : serving
+ac_scene -> bp_route_cd : serving
+ac_route -> bp_tiers : serving
+as_a11y -> bp_dex_arm : serving
+ac_dex -> bp_dex_arm : serving
+ac_dex -> bp_dex_input : serving
+ac_dex -> bp_dex_hotkey : serving
+ac_dex -> bp_dex_intent : serving
+ac_youtube -> bp_dex_intent : serving
+
+// Applicatie onderling: alles hangt aan core (P10)
+ac_host -> ac_ui : composition "host"
+ac_ui -> ac_scan : serving "navigeert naar"
+ac_ui -> ac_route : serving "navigeert naar"
+ac_ui -> ac_dex : serving "navigeert naar"
+ac_scan -> ai_probe : realization
+ac_display -> ai_probe : realization
+ac_net -> ai_probe : realization
+ac_audio -> ai_probe : realization
+ac_input -> ai_probe : realization
+ac_projection -> ai_probe : realization
+ac_samsung -> ai_probe : realization
+ac_auto -> ai_probe : realization
+ac_core -> ai_probe : composition
+ai_probe -> do_observation : access "levert"
+ac_core -> do_observation : access "logt"
+ac_core -> do_evidence : access "schrijft (SessionLogger)"
+ac_report -> do_evidence : access "leest"
+ac_report -> do_report : access "schrijft"
+ac_render -> do_evidence : access "leest (ook afgebroken sessie)"
+ac_render -> do_report : access "schrijft"
+ac_auto -> do_aamatrix : access "schrijft"
+ac_core -> ac_scan : serving "contract"
+ac_core -> ac_display : serving "contract"
+ac_core -> ac_net : serving "contract"
+ac_core -> ac_audio : serving "contract"
+ac_core -> ac_input : serving "contract"
+ac_core -> ac_projection : serving "contract"
+ac_core -> ac_scene : serving "contract"
+ac_core -> ac_samsung : serving "contract"
+ac_core -> ac_auto : serving "contract"
+ac_core -> ac_report : serving "contract"
+ac_core -> ac_route : serving "contract"
+ac_core -> ac_dex : serving "contract"
+ac_dex -> as_a11y : composition
+ac_dex -> ac_youtube : flow "Intent + setLaunchDisplayId"
+ac_smartview -> ac_scene : serving "levert secundair scherm"
+ac_horseapk -> ac_host : serving "levert APK"
+
+// Fysiek
+dv_zfold -> ac_host : assignment "draait"
+dv_zfold -> cn_wfd : association
+cn_wfd -> dv_mirai : association "Miracast-sink"
+dv_zfold -> cn_bt : association
+ss_projsvc -> ac_projection : serving "vereist voor createVirtualDisplay (Android 14+)"
+ss_android -> ac_host : serving
+ar_perm_net -> ac_net : association
+ar_perm_capture -> ss_projsvc : association
+ar_perm_capture -> ac_audio : association
+ar_perm_bt -> ac_dex : association
+cn_bt -> ac_dex : serving "HID-rapporten"
+nd_hc55 -> ac_horseapk : assignment "host"
+nd_box -> ac_host : association "smoke gate emulator-5584"
+
+// ================= Klantreizen =================
+Viewpoint reis_sessie "Klantreis: voertuigsessie Z Fold x Mirai (stilstaand)" {
+    -attr journey = "true"
+    -attr actor = "br_tester"
+    -attr steps = "bp_baseline bp_scan_auto bp_miracast bp_scene bp_touch bp_audio bp_aa bp_motion bp_export bp_findings"
+    -description "De testprocedure van begin tot eind; alles voertuigzijdig staat nog op NOT TESTED (MC-V1..V4)."
+}
+Viewpoint reis_routes "Klantreis: routes A-D meten" {
+    -attr journey = "true"
+    -attr actor = "br_tester"
+    -attr steps = "bp_rol bp_route_ab bp_route_cd bp_tiers bp_export"
+    -description "Schermrol, dan elke route onafhankelijk; C1 en C2 bewust apart gemeten."
+}
+Viewpoint reis_dex "Klantreis: DeX-bediening en Intent-route (v0.3.0)" {
+    -attr journey = "true"
+    -attr actor = "br_tester"
+    -attr steps = "bp_dex_arm bp_dex_input bp_dex_hotkey bp_dex_intent bp_export"
+    -description "Hoofdbevinding is negatief: de hotkey-flow is op ordinary-app-niveau onbereikbaar; de Intent-route werkt wel."
+}

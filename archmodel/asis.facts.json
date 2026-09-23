@@ -1,0 +1,391 @@
+{
+  "schema": 1,
+  "extractor": "ModelArchDSL/extract",
+  "facts": [
+    {
+      "id": "android:activity:MainActivity",
+      "kind": "android",
+      "label": "activity MainActivity",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:110"
+      ],
+      "sub": "activity"
+    },
+    {
+      "id": "android:activity:PresentationHostActivity",
+      "kind": "android",
+      "label": "activity PresentationHostActivity",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:125"
+      ],
+      "sub": "activity"
+    },
+    {
+      "id": "android:provider:FileProvider",
+      "kind": "android",
+      "label": "provider FileProvider",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:159"
+      ],
+      "sub": "provider"
+    },
+    {
+      "id": "android:service:LabAccessibilityService",
+      "kind": "android",
+      "label": "service LabAccessibilityService",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:141"
+      ],
+      "sub": "service"
+    },
+    {
+      "id": "android:service:ProjectionService",
+      "kind": "android",
+      "label": "service ProjectionService",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:154"
+      ],
+      "sub": "service"
+    },
+    {
+      "id": "dep:maven:libs.androidx.activity.compose",
+      "kind": "dep",
+      "label": "libs.androidx.activity.compose",
+      "sources": [
+        "app/build.gradle.kts:63"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.compose.material.icons",
+      "kind": "dep",
+      "label": "libs.androidx.compose.material.icons",
+      "sources": [
+        "app/build.gradle.kts:69"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.compose.material3",
+      "kind": "dep",
+      "label": "libs.androidx.compose.material3",
+      "sources": [
+        "app/build.gradle.kts:68"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.compose.ui",
+      "kind": "dep",
+      "label": "libs.androidx.compose.ui",
+      "sources": [
+        "app/build.gradle.kts:65"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.compose.ui.graphics",
+      "kind": "dep",
+      "label": "libs.androidx.compose.ui.graphics",
+      "sources": [
+        "app/build.gradle.kts:66"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.compose.ui.tooling.preview",
+      "kind": "dep",
+      "label": "libs.androidx.compose.ui.tooling.preview",
+      "sources": [
+        "app/build.gradle.kts:67"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.core.ktx",
+      "kind": "dep",
+      "label": "libs.androidx.core.ktx",
+      "sources": [
+        "app/build.gradle.kts:59"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.lifecycle.runtime.compose",
+      "kind": "dep",
+      "label": "libs.androidx.lifecycle.runtime.compose",
+      "sources": [
+        "app/build.gradle.kts:61"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.lifecycle.runtime.ktx",
+      "kind": "dep",
+      "label": "libs.androidx.lifecycle.runtime.ktx",
+      "sources": [
+        "app/build.gradle.kts:60"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.lifecycle.viewmodel.compose",
+      "kind": "dep",
+      "label": "libs.androidx.lifecycle.viewmodel.compose",
+      "sources": [
+        "app/build.gradle.kts:62"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.androidx.navigation.compose",
+      "kind": "dep",
+      "label": "libs.androidx.navigation.compose",
+      "sources": [
+        "app/build.gradle.kts:70"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "dep:maven:libs.kotlinx.coroutines.android",
+      "kind": "dep",
+      "label": "libs.kotlinx.coroutines.android",
+      "sources": [
+        "app/build.gradle.kts:71"
+      ],
+      "eco": "maven"
+    },
+    {
+      "id": "module:app/src/main/java",
+      "kind": "module",
+      "label": "app",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/MainActivity.kt"
+      ],
+      "files": 1
+    },
+    {
+      "id": "module:app/src/main/java/audio",
+      "kind": "module",
+      "label": "app:/audio",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/audio/AudioRouteProbe.kt"
+      ],
+      "files": 3
+    },
+    {
+      "id": "module:app/src/main/java/auto",
+      "kind": "module",
+      "label": "app:/auto",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/auto/AndroidAutoProbe.kt"
+      ],
+      "files": 7
+    },
+    {
+      "id": "module:app/src/main/java/core",
+      "kind": "module",
+      "label": "app:/core",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/core/DashboardKeys.kt"
+      ],
+      "files": 8
+    },
+    {
+      "id": "module:app/src/main/java/dex",
+      "kind": "module",
+      "label": "app:/dex",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/dex/AppLauncher.kt"
+      ],
+      "files": 9
+    },
+    {
+      "id": "module:app/src/main/java/display",
+      "kind": "module",
+      "label": "app:/display",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/display/DisplayFacts.kt"
+      ],
+      "files": 4
+    },
+    {
+      "id": "module:app/src/main/java/input",
+      "kind": "module",
+      "label": "app:/input",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/input/InputCaptureView.kt"
+      ],
+      "files": 5
+    },
+    {
+      "id": "module:app/src/main/java/net",
+      "kind": "module",
+      "label": "app:/net",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/net/ConnectivityProbe.kt"
+      ],
+      "files": 5
+    },
+    {
+      "id": "module:app/src/main/java/projection",
+      "kind": "module",
+      "label": "app:/projection",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/projection/CaptureEngine.kt"
+      ],
+      "files": 6
+    },
+    {
+      "id": "module:app/src/main/java/report",
+      "kind": "module",
+      "label": "app:/report",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/report/LogViewerScreen.kt"
+      ],
+      "files": 3
+    },
+    {
+      "id": "module:app/src/main/java/route",
+      "kind": "module",
+      "label": "app:/route",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/route/DisplayRole.kt"
+      ],
+      "files": 11
+    },
+    {
+      "id": "module:app/src/main/java/samsung",
+      "kind": "module",
+      "label": "app:/samsung",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/samsung/DexProbe.kt"
+      ],
+      "files": 5
+    },
+    {
+      "id": "module:app/src/main/java/scan",
+      "kind": "module",
+      "label": "app:/scan",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/scan/CodecProbe.kt"
+      ],
+      "files": 4
+    },
+    {
+      "id": "module:app/src/main/java/scene",
+      "kind": "module",
+      "label": "app:/scene",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/scene/ControlPanel.kt"
+      ],
+      "files": 6
+    },
+    {
+      "id": "module:app/src/main/java/ui",
+      "kind": "module",
+      "label": "app:/ui",
+      "sources": [
+        "app/src/main/java/nl/icthorse/miraicastlab/ui/DashboardScreen.kt"
+      ],
+      "files": 4
+    },
+    {
+      "id": "module:tools/report",
+      "kind": "module",
+      "label": "tools/report",
+      "sources": [
+        "tools/report/render_report.py"
+      ],
+      "files": 1
+    },
+    {
+      "id": "permission:ACCESS_COARSE_LOCATION",
+      "kind": "permission",
+      "label": "ACCESS_COARSE_LOCATION",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:21"
+      ]
+    },
+    {
+      "id": "permission:ACCESS_FINE_LOCATION",
+      "kind": "permission",
+      "label": "ACCESS_FINE_LOCATION",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:19"
+      ]
+    },
+    {
+      "id": "permission:ACCESS_NETWORK_STATE",
+      "kind": "permission",
+      "label": "ACCESS_NETWORK_STATE",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:12"
+      ]
+    },
+    {
+      "id": "permission:ACCESS_WIFI_STATE",
+      "kind": "permission",
+      "label": "ACCESS_WIFI_STATE",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:13"
+      ]
+    },
+    {
+      "id": "permission:BLUETOOTH_CONNECT",
+      "kind": "permission",
+      "label": "BLUETOOTH_CONNECT",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:38"
+      ]
+    },
+    {
+      "id": "permission:CHANGE_WIFI_STATE",
+      "kind": "permission",
+      "label": "CHANGE_WIFI_STATE",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:14"
+      ]
+    },
+    {
+      "id": "permission:FOREGROUND_SERVICE",
+      "kind": "permission",
+      "label": "FOREGROUND_SERVICE",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:28"
+      ]
+    },
+    {
+      "id": "permission:FOREGROUND_SERVICE_MEDIA_PROJECTION",
+      "kind": "permission",
+      "label": "FOREGROUND_SERVICE_MEDIA_PROJECTION",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:29"
+      ]
+    },
+    {
+      "id": "permission:NEARBY_WIFI_DEVICES",
+      "kind": "permission",
+      "label": "NEARBY_WIFI_DEVICES",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:23"
+      ]
+    },
+    {
+      "id": "permission:POST_NOTIFICATIONS",
+      "kind": "permission",
+      "label": "POST_NOTIFICATIONS",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:30"
+      ]
+    },
+    {
+      "id": "permission:RECORD_AUDIO",
+      "kind": "permission",
+      "label": "RECORD_AUDIO",
+      "sources": [
+        "app/src/main/AndroidManifest.xml:33"
+      ]
+    }
+  ]
+}

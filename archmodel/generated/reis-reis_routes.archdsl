@@ -1,0 +1,93 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "MiraiCastLab — Klantreis: routes A-D meten"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Schermrol, dan elke route onafhankelijk; C1 en C2 bewust apart gemeten."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 180
+}
+BusinessRole br_tester "Tester met Z Fold in stilstaande Mirai" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_rol "Schermrol bepalen (welk Display is DeX/Miracast)" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_route_ab "Routes A en B meten (WFD-toegang, sessie-eigendom)" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_route_cd "Routes C en D meten (eigen / andere app op gekozen scherm)" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_tiers "Capability x privilege-tier-matrix lezen" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_export "Rapport exporteren (Markdown, JSON, CSV)" in laag_business {
+    -step 5
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 820
+    -height 180
+}
+ApplicationComponent ac_display "display — schermtopologie en MediaRouter" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/display"
+}
+ApplicationComponent ac_route "route — routes A-D, schermrol, privilege-tiers" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/route"
+    -description "DisplayRole (verdict nooit sterker dan INFERRED voor remote), RouteA-D, LabPresentation, PrivilegeTiers."
+}
+ApplicationComponent ac_scene "scene — diagnostisch testbeeld" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/scene, android:activity:PresentationHostActivity"
+    -description "SceneEngine/Renderer; PresentationHostActivity zet het beeld via setLaunchDisplayId op een secundair scherm."
+}
+ApplicationComponent ac_report "report — 20-sectie-generator, export, logviewer" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:app/src/main/java/report, android:provider:FileProvider"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos br_tester 60, 90
+pos bp_rol 260, 90
+pos bp_route_ab 460, 90
+pos bp_route_cd 660, 90
+pos bp_tiers 860, 90
+pos bp_export 1060, 90
+pos laag_application 40, 260
+pos ac_display 60, 310
+pos ac_route 260, 310
+pos ac_scene 460, 310
+pos ac_report 660, 310
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ac_report serves bp_export
+ac_route serves bp_rol
+ac_display serves bp_rol
+ac_route serves bp_route_ab
+ac_route serves bp_route_cd
+ac_scene serves bp_route_cd
+ac_route serves bp_tiers
+bp_rol -> bp_route_ab
+bp_route_ab -> bp_route_cd
+bp_route_cd -> bp_tiers
+bp_tiers -> bp_export
+br_tester -> bp_rol "start"

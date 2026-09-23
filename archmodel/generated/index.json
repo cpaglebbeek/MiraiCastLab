@@ -1,0 +1,1793 @@
+{
+  "plates": [
+    {
+      "file": "conceptueel.archdsl",
+      "kind": "niveau",
+      "level": "conceptueel",
+      "label": "Conceptueel",
+      "elements": 42,
+      "relations": 15,
+      "sha256": "1490af5aa700d7ec32c8dce93389804a9697c328bb65f74014b609f79ca53244"
+    },
+    {
+      "file": "logisch.archdsl",
+      "kind": "niveau",
+      "level": "logisch",
+      "label": "Logisch",
+      "elements": 29,
+      "relations": 40,
+      "sha256": "cfe34751ff76508df02938167efc3ed42af66088edf7a78517b9b13ff5ac27bf"
+    },
+    {
+      "file": "fysiek.archdsl",
+      "kind": "niveau",
+      "level": "fysiek",
+      "label": "Fysiek",
+      "elements": 8,
+      "relations": 3,
+      "sha256": "3d590433cc10397410946d1aa6cab9afd638ee3c391d0e8b100bf8246b3547b9"
+    },
+    {
+      "file": "reis-reis_sessie.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_sessie",
+      "label": "Klantreis: voertuigsessie Z Fold x Mirai (stilstaand)",
+      "steps": [
+        "bp_baseline",
+        "bp_scan_auto",
+        "bp_miracast",
+        "bp_scene",
+        "bp_touch",
+        "bp_audio",
+        "bp_aa",
+        "bp_motion",
+        "bp_export",
+        "bp_findings"
+      ],
+      "actor": "br_tester",
+      "elements": 28,
+      "relations": 32,
+      "sha256": "2ab71c74455972d6892694f9fd8adf92407a3c785f53f8923d029889f87165b2"
+    },
+    {
+      "file": "reis-reis_routes.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_routes",
+      "label": "Klantreis: routes A-D meten",
+      "steps": [
+        "bp_rol",
+        "bp_route_ab",
+        "bp_route_cd",
+        "bp_tiers",
+        "bp_export"
+      ],
+      "actor": "br_tester",
+      "elements": 10,
+      "relations": 12,
+      "sha256": "890216373c3ec9dc31f1b52e13f9ed487f4448b69f5a7dc517484cdee9323d03"
+    },
+    {
+      "file": "reis-reis_dex.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_dex",
+      "label": "Klantreis: DeX-bediening en Intent-route (v0.3.0)",
+      "steps": [
+        "bp_dex_arm",
+        "bp_dex_input",
+        "bp_dex_hotkey",
+        "bp_dex_intent",
+        "bp_export"
+      ],
+      "actor": "br_tester",
+      "elements": 10,
+      "relations": 14,
+      "sha256": "8f51d815824606bbe28b04c4ee5697cd6ef956ad3d077a9bfca16ac6d9a5ec0c"
+    }
+  ],
+  "repo": "MiraiCastLab",
+  "title": "MiraiCastLab",
+  "purpose": "Empirisch vaststellen welke beeld-, geluid- en invoerpaden bestaan tussen een niet-gerootte Galaxy Z Fold en een Toyota Mirai 2025, met per bevinding een bewijsstatus.",
+  "tool": {
+    "name": "ModelArchDSL",
+    "version": "0.1.0",
+    "engineSha256": "0bdabb3b46febb6190ec1e1698d285c5b140e15f4c7f07e7c22a85f2105dacae"
+  },
+  "status": {
+    "gebouwd": {
+      "label": "Gebouwd",
+      "stroke": "#16a34a"
+    },
+    "deels": {
+      "label": "Deels gebouwd",
+      "stroke": "#ca8a04",
+      "fill": "#fefce8"
+    },
+    "gepland": {
+      "label": "Gepland (to-be)",
+      "stroke": "#ea580c",
+      "fill": "#fff7ed",
+      "state": "target"
+    },
+    "alleen_code": {
+      "label": "Alleen in code",
+      "stroke": "#7c3aed",
+      "fill": "#f5f3ff",
+      "state": "current"
+    },
+    "ongetraceerd": {
+      "label": "Niet traceerbaar",
+      "stroke": "#64748b"
+    },
+    "extern": {
+      "label": "Extern (andere repo)",
+      "stroke": "#0284c7",
+      "fill": "#f0f9ff"
+    },
+    "ontwerp": {
+      "label": "Ontwerp",
+      "stroke": ""
+    }
+  },
+  "counts": {
+    "gebouwd": 27,
+    "deels": 0,
+    "gepland": 0,
+    "alleen_code": 0,
+    "ongetraceerd": 0,
+    "extern": 10,
+    "ontwerp": 42
+  },
+  "facts": 44,
+  "unclaimedFacts": 0,
+  "warnings": [],
+  "elements": [
+    {
+      "id": "ac_audio",
+      "type": "ApplicationComponent",
+      "label": "audio — routes en gesynthetiseerde testtonen",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/audio"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/audio",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/audio/AudioRouteProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_auto",
+      "type": "ApplicationComponent",
+      "label": "auto — Android Auto-matrix en rijstatus-observatie",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/auto"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/auto",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/auto/AndroidAutoProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_core",
+      "type": "ApplicationComponent",
+      "label": "core — bewijsmodel en contract",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/core"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/core",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/core/DashboardKeys.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "LabStatus, Observation, LogRecord, SessionLogger, Probe/safeObserve, ProbeRegistry, LabPermissions, DashboardKeys, Json, Experiment."
+    },
+    {
+      "id": "ac_dex",
+      "type": "ApplicationComponent",
+      "label": "dex — DeX-bediening en Intent-route (v0.3.0)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/dex"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/dex",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/dex/AppLauncher.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "InputRoutes, DexInput, HidKeyboard/HidKeyMap/HidReportDescriptor, AppLauncher, YouTubeActions, DexControlScreen."
+    },
+    {
+      "id": "ac_display",
+      "type": "ApplicationComponent",
+      "label": "display — schermtopologie en MediaRouter",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/display"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/display",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/display/DisplayFacts.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_host",
+      "type": "ApplicationComponent",
+      "label": "App-host (MainActivity)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java",
+        "android:activity:MainActivity"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "android:activity:MainActivity",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:110"
+          ]
+        },
+        {
+          "id": "module:app/src/main/java",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/MainActivity.kt"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": "Single-activity host voor alle bestemmingen."
+    },
+    {
+      "id": "ac_input",
+      "type": "ApplicationComponent",
+      "label": "input — eventmonitor en touch-back-raster",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/input"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/input",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/input/InputCaptureView.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_net",
+      "type": "ApplicationComponent",
+      "label": "net — Wi-Fi Direct en connectiviteit",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/net"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/net",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/net/ConnectivityProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_projection",
+      "type": "ApplicationComponent",
+      "label": "projection — capture, VirtualDisplay, H.264",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/projection"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/projection",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/projection/CaptureEngine.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_render",
+      "type": "ApplicationComponent",
+      "label": "Werkstation-renderer (render_report.py)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:tools/report"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:tools/report",
+          "sources": [
+            "tools/report/render_report.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "Rendert JSONL of JSON-export tot hetzelfde 20-sectie-rapport; ook voor sessies die de exportstap nooit haalden."
+    },
+    {
+      "id": "ac_report",
+      "type": "ApplicationComponent",
+      "label": "report — 20-sectie-generator, export, logviewer",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/report",
+        "android:provider:FileProvider"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "android:provider:FileProvider",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:159"
+          ]
+        },
+        {
+          "id": "module:app/src/main/java/report",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/report/LogViewerScreen.kt"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": ""
+    },
+    {
+      "id": "ac_route",
+      "type": "ApplicationComponent",
+      "label": "route — routes A-D, schermrol, privilege-tiers",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/route"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/route",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/route/DisplayRole.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "DisplayRole (verdict nooit sterker dan INFERRED voor remote), RouteA-D, LabPresentation, PrivilegeTiers."
+    },
+    {
+      "id": "ac_samsung",
+      "type": "ApplicationComponent",
+      "label": "samsung — Smart View, DeX, Miracast-wizard",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/samsung"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/samsung",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/samsung/DexProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_scan",
+      "type": "ApplicationComponent",
+      "label": "scan — apparaat- en codecinventaris",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/scan"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/scan",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/scan/CodecProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_scene",
+      "type": "ApplicationComponent",
+      "label": "scene — diagnostisch testbeeld",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/scene",
+        "android:activity:PresentationHostActivity"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "android:activity:PresentationHostActivity",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:125"
+          ]
+        },
+        {
+          "id": "module:app/src/main/java/scene",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/scene/ControlPanel.kt"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": "SceneEngine/Renderer; PresentationHostActivity zet het beeld via setLaunchDisplayId op een secundair scherm."
+    },
+    {
+      "id": "ac_ui",
+      "type": "ApplicationComponent",
+      "label": "ui — thema, navigatie, dashboard",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/ui"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/ui",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/ui/DashboardScreen.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "LabNavHost: vlakke graaf van string-routes; DashboardScreen; LabComponents; LabTheme (vast donker, MC-007)."
+    },
+    {
+      "id": "ai_probe",
+      "type": "ApplicationInterface",
+      "label": "Probe-contract (12 probes, read-only, idempotent)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/core"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/core",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/core/DashboardKeys.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ar_perm_bt",
+      "type": "Artifact",
+      "label": "Permissie Bluetooth HID",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "permission:BLUETOOTH_CONNECT"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "permission:BLUETOOTH_CONNECT",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:38"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ar_perm_capture",
+      "type": "Artifact",
+      "label": "Permissies capture (FGS, notificaties, audio)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "permission:FOREGROUND_SERVICE*",
+        "permission:POST_NOTIFICATIONS",
+        "permission:RECORD_AUDIO"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "permission:FOREGROUND_SERVICE",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:28"
+          ]
+        },
+        {
+          "id": "permission:FOREGROUND_SERVICE_MEDIA_PROJECTION",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:29"
+          ]
+        },
+        {
+          "id": "permission:POST_NOTIFICATIONS",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:30"
+          ]
+        },
+        {
+          "id": "permission:RECORD_AUDIO",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:33"
+          ]
+        }
+      ],
+      "factCount": 4,
+      "description": ""
+    },
+    {
+      "id": "ar_perm_net",
+      "type": "Artifact",
+      "label": "Permissies netwerk + Wi-Fi Direct",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "permission:ACCESS_NETWORK_STATE",
+        "permission:ACCESS_WIFI_STATE",
+        "permission:CHANGE_WIFI_STATE",
+        "permission:NEARBY_WIFI_DEVICES",
+        "permission:ACCESS_*_LOCATION"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "permission:ACCESS_COARSE_LOCATION",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:21"
+          ]
+        },
+        {
+          "id": "permission:ACCESS_FINE_LOCATION",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:19"
+          ]
+        },
+        {
+          "id": "permission:ACCESS_NETWORK_STATE",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:12"
+          ]
+        },
+        {
+          "id": "permission:ACCESS_WIFI_STATE",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:13"
+          ]
+        },
+        {
+          "id": "permission:CHANGE_WIFI_STATE",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:14"
+          ]
+        },
+        {
+          "id": "permission:NEARBY_WIFI_DEVICES",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:23"
+          ]
+        }
+      ],
+      "factCount": 6,
+      "description": "Locatie alleen t/m API 32 voor P2P-discovery (MC-004); nooit locatie gelezen."
+    },
+    {
+      "id": "as_a11y",
+      "type": "ApplicationService",
+      "label": "Accessibility-service (gebaren, twee sloten)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "android:service:LabAccessibilityService"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "android:service:LabAccessibilityService",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:141"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_aamatrix",
+      "type": "DataObject",
+      "label": "Android Auto-matrix A-F (persistent)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/auto"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/auto",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/auto/AndroidAutoProbe.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_evidence",
+      "type": "DataObject",
+      "label": "Bewijslog evidence/run-<ts>-<id>.jsonl",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/core"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/core",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/core/DashboardKeys.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "Append-only, per record geflusht; overleeft het killen van het proces."
+    },
+    {
+      "id": "do_observation",
+      "type": "DataObject",
+      "label": "Observation met LabStatus",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/core"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/core",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/core/DashboardKeys.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_report",
+      "type": "DataObject",
+      "label": "Rapport report.md / .json / .csv",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:app/src/main/java/report"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:app/src/main/java/report",
+          "sources": [
+            "app/src/main/java/nl/icthorse/miraicastlab/report/LogViewerScreen.kt"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ss_android",
+      "type": "SystemSoftware",
+      "label": "Android-runtime en Jetpack-bibliotheken",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "dep:maven:*"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:maven:libs.androidx.activity.compose",
+          "sources": [
+            "app/build.gradle.kts:63"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.compose.material.icons",
+          "sources": [
+            "app/build.gradle.kts:69"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.compose.material3",
+          "sources": [
+            "app/build.gradle.kts:68"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.compose.ui",
+          "sources": [
+            "app/build.gradle.kts:65"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.compose.ui.graphics",
+          "sources": [
+            "app/build.gradle.kts:66"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.compose.ui.tooling.preview",
+          "sources": [
+            "app/build.gradle.kts:67"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.core.ktx",
+          "sources": [
+            "app/build.gradle.kts:59"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.lifecycle.runtime.compose",
+          "sources": [
+            "app/build.gradle.kts:61"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.lifecycle.runtime.ktx",
+          "sources": [
+            "app/build.gradle.kts:60"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.lifecycle.viewmodel.compose",
+          "sources": [
+            "app/build.gradle.kts:62"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.androidx.navigation.compose",
+          "sources": [
+            "app/build.gradle.kts:70"
+          ]
+        },
+        {
+          "id": "dep:maven:libs.kotlinx.coroutines.android",
+          "sources": [
+            "app/build.gradle.kts:71"
+          ]
+        }
+      ],
+      "factCount": 12,
+      "description": "Compose/Material 3, lifecycle, navigation, coroutines, core-ktx (docs/DEPENDENCIES.md)."
+    },
+    {
+      "id": "ss_projsvc",
+      "type": "SystemSoftware",
+      "label": "ProjectionService (FGS mediaProjection)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "android:service:ProjectionService"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "android:service:ProjectionService",
+          "sources": [
+            "app/src/main/AndroidManifest.xml:154"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_androidauto",
+      "type": "ApplicationComponent",
+      "label": "Android Auto (gearhead)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ac_horseapk",
+      "type": "ApplicationComponent",
+      "label": "HorseAPK-portaal (distributie)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ac_smartview",
+      "type": "ApplicationComponent",
+      "label": "Samsung Smart View / Wireless DeX",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": "Eigenaar van de Miracast-sessie (route B); de app kan niet zelf verbinden (P6)."
+    },
+    {
+      "id": "ac_youtube",
+      "type": "ApplicationComponent",
+      "label": "YouTube-app (doel van de Intent-route)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_bt",
+      "type": "CommunicationNetwork",
+      "label": "Bluetooth (HID naar gekoppelde host)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_wfd",
+      "type": "CommunicationNetwork",
+      "label": "Wi-Fi Direct / Miracast-link",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_mirai",
+      "type": "Device",
+      "label": "Toyota Mirai 2025 head unit",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_zfold",
+      "type": "Device",
+      "label": "Samsung Galaxy Z Fold (niet geroot)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "nd_box",
+      "type": "Node",
+      "label": "HorseBoat-box 95.216.46.120 (emulator-5584, smoke gate L3)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "nd_hc55",
+      "type": "Node",
+      "label": "HC55 157.180.29.184 (build + APK-hosting)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ba_christian",
+      "type": "BusinessActor",
+      "label": "Christian (eigenaar en tester)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bo_findings",
+      "type": "BusinessObject",
+      "label": "Protocolbevindingen (docs/protocol-findings.md)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_aa",
+      "type": "BusinessProcess",
+      "label": "Android Auto-coëxistentiematrix (rijen C-F)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_audio",
+      "type": "BusinessProcess",
+      "label": "Audiotests op de autospeakers",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_baseline",
+      "type": "BusinessProcess",
+      "label": "Baseline-scan thuis, zonder auto",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_dex_arm",
+      "type": "BusinessProcess",
+      "label": "Accessibility inschakelen en in-app armeren",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_dex_hotkey",
+      "type": "BusinessProcess",
+      "label": "Hotkey-flow per stap rapporteren",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_dex_input",
+      "type": "BusinessProcess",
+      "label": "Invoerroutes per tier meten (Instrumentation, accessibility, HID, adb)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_dex_intent",
+      "type": "BusinessProcess",
+      "label": "YouTube via Intent op gekozen scherm openen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_export",
+      "type": "BusinessProcess",
+      "label": "Rapport exporteren (Markdown, JSON, CSV)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_findings",
+      "type": "BusinessProcess",
+      "label": "Protocol-findings bijwerken uit het rapport",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_miracast",
+      "type": "BusinessProcess",
+      "label": "Smart View handmatig verbinden en wijzigingen volgen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_motion",
+      "type": "BusinessProcess",
+      "label": "Rijstatus observeren met markers (alleen observatie)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_rol",
+      "type": "BusinessProcess",
+      "label": "Schermrol bepalen (welk Display is DeX/Miracast)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_route_ab",
+      "type": "BusinessProcess",
+      "label": "Routes A en B meten (WFD-toegang, sessie-eigendom)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_route_cd",
+      "type": "BusinessProcess",
+      "label": "Routes C en D meten (eigen / andere app op gekozen scherm)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_scan_auto",
+      "type": "BusinessProcess",
+      "label": "Baseline in de auto, niets verbonden (rij A)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_scene",
+      "type": "BusinessProcess",
+      "label": "Testbeeld op het autoscherm zetten en aflezen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_sessie",
+      "type": "BusinessProcess",
+      "label": "Voertuigsessie uitvoeren (testprocedure)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_tiers",
+      "type": "BusinessProcess",
+      "label": "Capability x privilege-tier-matrix lezen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_touch",
+      "type": "BusinessProcess",
+      "label": "Touch-back: doelen op het autoscherm aanraken",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "br_tester",
+      "type": "BusinessRole",
+      "label": "Tester met Z Fold in stilstaande Mirai",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_bewijs",
+      "type": "BusinessService",
+      "label": "Bewijsbestand met gegradeerde bevindingen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_matrix",
+      "type": "BusinessService",
+      "label": "Capability-matrix (protocol-findings.md)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_geenroot",
+      "type": "Constraint",
+      "label": "Geen root; primaire build op ordinary-app-niveau",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_modules",
+      "type": "Constraint",
+      "label": "Modules importeren elkaar niet, alles hangt aan core (P10)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_offline",
+      "type": "Constraint",
+      "label": "Geen INTERNET-permissie: offline door constructie (P11)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_stilstand",
+      "type": "Constraint",
+      "label": "Voertuigtests alleen stilstaand, op de bank of in een emulator",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_twee_sloten",
+      "type": "Constraint",
+      "label": "Accessibility-service uit achter twee sloten (Instellingen + in-app armed)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_veiligheid",
+      "type": "Constraint",
+      "label": "Geen interlock-bypass, CAN-injectie of voertuigstatus-spoofing (SAFETY)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dr_onbekend",
+      "type": "Driver",
+      "label": "Onbekend wat werkt tussen Z Fold en Mirai 2025",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dr_vals",
+      "type": "Driver",
+      "label": "Een vals resultaat is het te vermijden risico (P6)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_dexbediening",
+      "type": "Goal",
+      "label": "Kan deze app het toetsenbord en de muis van DeX zijn (v0.3.0)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_empirisch",
+      "type": "Goal",
+      "label": "Empirisch antwoord: beeld, geluid, touch-back",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_routes",
+      "type": "Goal",
+      "label": "Kan een app content op het door Samsung opgezette scherm zetten (routes A-D)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "pr_crash",
+      "type": "Principle",
+      "label": "Een probe-crash is data, geen storing (P4)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "pr_nietsinken",
+      "type": "Principle",
+      "label": "Telefoonkant zegt niets over de sink (P3)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_nottested",
+      "type": "Requirement",
+      "label": "NOT_TESTED wordt nooit UNSUPPORTED (P2)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_rapport",
+      "type": "Requirement",
+      "label": "Rapport met mechanische indeling uit de enum",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_schrijven",
+      "type": "Requirement",
+      "label": "Bewijs wordt geschreven terwijl het gebeurt (P8)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_status",
+      "type": "Requirement",
+      "label": "Elke bevinding draagt een bewijsstatus (P1)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "sh_tester",
+      "type": "Stakeholder",
+      "label": "Tester in de auto (P9)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    }
+  ]
+}
