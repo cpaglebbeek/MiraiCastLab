@@ -65,7 +65,7 @@ a process kill) and `filesDir/reports/`. **No `INTERNET` permission** — nothin
 ## Deploy
 
 `./gradlew :app:assembleDebug` on HC55 → `dist/MiraiCastLab-v<version>-<Codename>-debug.apk` →
-`/APKDeploy` → `horsecloud55.ddns.net:4443/MiraiCastLab/`. Emulator smoke gate is mandatory first;
+`/APKDeploy` → `icthorsecloud.nl:4443/MiraiCastLab/`. Emulator smoke gate is mandatory first;
 see [`TESTPLAN.md`](TESTPLAN.md) L3.
 
 ## Interactive architecture viewer

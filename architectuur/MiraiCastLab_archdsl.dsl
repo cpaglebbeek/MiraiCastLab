@@ -98,7 +98,7 @@ Node n_gradle "Gradle 8.11.1 wrapper - AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024
 Artifact art_apk_debug "app-debug.apk - applicationIdSuffix .debug" { -description "Debug and release can be installed side by side during a vehicle session." -attr src = "BUILD.md" }
 Node n_emulator "Emulator smoke gate - emulator-5584 (mandatory)" { -description "Green = FATAL count 0 and a live pid. Green unit tests do not substitute." -attr src = "BUILD.md 'Emulator smoke gate' · CLAUDE.md release protocol" }
 Artifact art_apk_dist "dist/MiraiCastLab-v0.1.0-Mirai-debug.apk" { -attr src = "ARCHITECTURE.md Deploy · dist/ · version.json" }
-Node n_horseapk "HorseAPK - /APKDeploy to horsecloud55.ddns.net:4443/MiraiCastLab/" { -attr src = "ARCHITECTURE.md Deploy" }
+Node n_horseapk "HorseAPK - /APKDeploy to icthorsecloud.nl:4443/MiraiCastLab/" { -attr src = "ARCHITECTURE.md Deploy" }
 Artifact art_tools_adb "tools/adb - collect-dumpsys.sh, watch-session.sh, pull-evidence.sh" { -description "Read-only diagnostics for the developer workstation. None require root, none change device or vehicle state." -attr src = "tools/adb/README.md" }
 Artifact art_tools_report "tools/report/render_report.py" { -description "Re-renders an old run, and renders a session that never reached the export screen. A torn final line - the signature of a killed process - is reported on stderr and skipped, never dropped silently." -attr src = "tools/report/README.md" }
 CommunicationNetwork cn_wifi "Wi-Fi Direct / p2p0 - 5 GHz radio contention" { -attr src = "docs/DEPENDENCIES.md platform surfaces · test procedure §6" }
